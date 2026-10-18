@@ -1,0 +1,27 @@
+Reelio Personal Use Licence — version 1
+Copyright (c) 2026 HSVE. All rights reserved.
+
+Reelio is proprietary software, made available without charge for personal,
+non-commercial self-hosting. You may download and run official binary releases
+on systems you control and make backup copies for that use.
+
+No licence to the Reelio application source code is granted. Except where
+mandatory law permits otherwise, you may not modify, redistribute, sublicense,
+sell, decompile or reverse engineer Reelio without written permission from HSVE.
+Commercial use and redistribution require separate written permission.
+
+Third-party components retain their own licences. Their notices and rights take
+precedence for those components; this licence does not restrict rights granted
+by their respective authors. Downloaded media and metadata are not licensed by
+this agreement. You must obtain any permissions required for your use of them.
+
+Donations are voluntary. They do not purchase features, support, ownership,
+source-code access or a commitment to future updates.
+
+Reelio is provided as is, without warranties, to the extent permitted by law.
+No term excludes liability or statutory rights that cannot lawfully be excluded.
+Keep independent backups. Preview builds may change and are intended for testing.
+
+The same rights reservation applies to this website and documentation, except
+that you may copy the supplied installation commands and configuration examples
+to install and operate Reelio under this licence.

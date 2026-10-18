@@ -1,0 +1,21 @@
+name: Report a problem
+description: Help improve Reelio. Do not include credentials or private data.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Reelio version
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include what you expected and the steps to reproduce it. Redact all secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Docker/Compose version and browser. Do not include public addresses or credentials.

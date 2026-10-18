@@ -1,0 +1,54 @@
+name: ${REELIO_PROJECT:-reelio-public}
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: reelio
+      POSTGRES_DB: reelio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run install.sh to generate a database password}
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U reelio -d reelio]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+  api:
+    image: reelio/api:${REELIO_IMAGE_TAG:?Use the image tag supplied with the release}
+    environment:
+      DATABASE_URL: postgres://reelio:${POSTGRES_PASSWORD}@postgres:5432/reelio?sslmode=disable
+      SESSION_COOKIE: reelio_public_session
+      SECURE_COOKIE: ${SECURE_COOKIE:-false}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      DISPATCH_CONCURRENCY: ${DISPATCH_CONCURRENCY:-4}
+      BACKUP_DIR: /backups
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, wget -qO- http://127.0.0.1:8080/api/health >/dev/null || exit 1]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+  web:
+    image: reelio/web:${REELIO_IMAGE_TAG:?Use the image tag supplied with the release}
+    ports:
+      - "${REELIO_BIND:-127.0.0.1}:${REELIO_PORT:-43834}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, wget -qO- http://127.0.0.1/ >/dev/null || exit 1]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+volumes:
+  postgres:
+  backups:

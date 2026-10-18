@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+out/
+.qa/
+*.dump
+*.tar
+*.tar.gz
+*.zip
+*.tsbuildinfo
+docker-compose.override.*
