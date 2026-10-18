@@ -10,7 +10,7 @@ cd "$bundle"
 sha256sum -c SHA256SUMS
 sh "$target/backup.sh"
 backup="$(cat "$target/.last-backup")"
-gzip -dc images.tar.gz | docker load
+sh ./prepare-images.sh
 tag="$(cat image-tag.txt)"
 case "$tag" in ''|*[!a-zA-Z0-9._-]*) exit 1;; esac
 rollback() {

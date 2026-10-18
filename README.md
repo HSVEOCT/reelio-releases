@@ -6,15 +6,16 @@ A home for your family's next film night. Discover movies and shows, request mis
 
 **Public distribution is being prepared. No stable download has been published yet.**
 
-Reelio is free for personal, non-commercial self-hosting under the [Reelio Personal Use Licence](LICENSE.txt). The application source is private. This repository contains the public website, documentation and installation helpers; releases will contain compiled Docker images, not application source.
+Reelio is free for personal, non-commercial self-hosting under the [Reelio Personal Use Licence](LICENSE.txt). The application source is private. This repository contains the public website, documentation and installation helpers; release bundles contain the compiled API, browser assets and runtime assembly files. Application source is not included.
 
 - [Get started](INSTALL.md)
 - [Updates and backups](UPDATING.md)
 - [How releases are tested](RELEASES.md)
 - [Privacy and integrations](PRIVACY.md)
+- [Licences and third-party components](THIRD-PARTY.md)
 - [Report a problem](https://github.com/HSVEOCT/reelio-releases/issues)
 
-Requires a Linux amd64 Docker host with Docker Compose v2. The first release targets Jellyfin, with optional Radarr and Sonarr integrations. No films, TV files, accounts, metadata credentials or download-service subscriptions are included.
+Requires a Linux amd64 Docker host with Docker Compose v2 and internet access during installation or an update. Docker obtains official runtime components directly from their upstream distributors. The first release targets Jellyfin, with optional Radarr and Sonarr integrations. No films, TV files, accounts, metadata credentials or download-service subscriptions are included.
 
 There is no donation account configured yet. Donations will be entirely optional and will not unlock features. Third-party metadata permissions must be confirmed separately; a donation model is not assumed to waive provider terms.
 

@@ -1,0 +1,9 @@
+*
+!reelio-api
+!THIRD_PARTY_NOTICES.txt
+!LICENSE.txt
+!web/
+!web/**
+!web.nginx.conf
+!api.Dockerfile
+!web.Dockerfile
