@@ -2,6 +2,8 @@
 
 A home for your family's next film night. Discover movies and shows, request missing titles and follow them into your Jellyfin library.
 
+**[Visit the Reelio website](https://hsveoct.github.io/reelio-releases/)**
+
 **Public distribution is being prepared. No stable download has been published yet.**
 
 Reelio is free for personal, non-commercial self-hosting under the [Reelio Personal Use Licence](LICENSE.txt). The application source is private. This repository contains the public website, documentation and installation helpers; releases will contain compiled Docker images, not application source.
