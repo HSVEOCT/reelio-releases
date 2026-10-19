@@ -39,6 +39,8 @@ When setup finishes, open the address it prints in a browser on your computer.
 2. Add your own TMDB credentials to enable discovery, then connect Jellyfin if you use it.
 3. Optionally connect Radarr and Sonarr. Test each connection and choose from the quality profiles and root folders returned by your service.
 
+On the **Requests** step, **Require approval for requests** is ticked by default for fresh installations. Untick it to let adult requests proceed automatically; child accounts still need approval. Administrator profiles can request directly, subject to any extra request policies. The choice is saved when pausing and shown on the final review. Upgrades retain existing approval behaviour until the owner changes it. Changing the setting affects future requests and does not approve waiting requests in bulk.
+
 You can skip services you do not use or pause and return through **Admin → Guided setup**. Existing installations open normally after an update; their owners can open the guide from Admin, keeping saved credentials and other settings.
 
 Keep the server and chosen address reachable from your household's network. Create your owner account before inviting other people.
@@ -82,7 +84,7 @@ For a connection problem, check the selected address, port and network access. F
 
 Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install option deliberately refuses occupied folders and projects. Choose option 2 for an existing installation; supported public and JSON migration layouts retain their data and settings.
 
-Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.18**, with guided service setup in the app.
+Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.19**, with guided service setup and a request-approval choice in the app.
 
 
 ## Optional installation statistics
