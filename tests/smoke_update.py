@@ -125,9 +125,11 @@ with tempfile.TemporaryDirectory(prefix="reelio-update-smoke-") as temporary:
     assert call("/api/me")["id"] == owner_id
     print("Legacy layout: JSON override, literal-dollar settings, old build paths, disabled worker and independent data volumes retained.")
 
-    # The fixture advertises a newer version while retaining the 1.0.17 binary.
+    # Advertise a newer version while retaining the current binary, even after
+    # the stable release advances beyond the version this test first used.
     # This must fail the post-start version check and restore the old deployment.
-    rollback_version = "1.0.18"
+    major, minor, patch = updater.version_tuple(current.current)
+    rollback_version = f"{major}.{minor}.{patch + 1}"
     (fixture / "VERSION").write_text(rollback_version + "\n")
     (fixture / "image-tag.txt").write_text("rollback-test-" + uuid.uuid4().hex[:8] + "\n")
     metadata = json.loads((fixture / "build.json").read_text())
