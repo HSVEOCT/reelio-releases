@@ -28,7 +28,7 @@ case "$tag" in ''|*[!a-zA-Z0-9._-]*) echo 'Invalid image tag' >&2; exit 1;; esac
 cp .env.example .env
 sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$password/;s/^REELIO_IMAGE_TAG=.*/REELIO_IMAGE_TAG=$tag/;s/^REELIO_PORT=.*/REELIO_PORT=$port/;s/^REELIO_PROJECT=.*/REELIO_PROJECT=$project/" .env
 chmod 600 .env
-gzip -dc images.tar.gz | docker load
+sh ./prepare-images.sh
 docker compose --env-file .env config --quiet
 docker compose --env-file .env up -d --pull never --wait --wait-timeout 180
 echo "Reelio is ready at http://127.0.0.1:$port"
