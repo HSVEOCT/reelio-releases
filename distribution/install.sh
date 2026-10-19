@@ -32,10 +32,29 @@ ready() {
   else
     say "Open: http://$bind:$saved_port"
   fi
-  say 'Create your owner account, then open Admin > Integrations to add your own TMDB and media services.'
+  say 'Create your owner account and follow the guided setup; existing owners can use Admin > Guided setup.'
   say "Settings and application files: $target"
   say "Back up later: cd '$target' && sudo sh backup.sh"
 }
+
+statistics() (
+  # Runs after healthy startup. Failures cannot affect installation or recovery.
+  expected=d5aaf1727d23c250feea3ab1f4009e1865a852f42a7147d422bbf0298e557ab9
+  case "${REELIO_TELEMETRY:-1}:${DO_NOT_TRACK:-0}" in 0:*|false:*|FALSE:*|off:*|OFF:*|no:*|NO:*|*:1) [ -e "$target/.reelio-telemetry.disabled" ] || [ -L "$target/.reelio-telemetry.disabled" ] || (set -C; : > "$target/.reelio-telemetry.disabled");; esac
+  local_dir=$(dirname -- "$self")
+  helper=$local_dir/reelio-telemetry.py
+  [ -f "$helper" ] || helper=$local_dir/distribution/reelio-telemetry.py
+  temporary=''
+  trap '[ -z "$temporary" ] || rm -f -- "$temporary"' EXIT
+  if [ ! -f "$helper" ] || [ "$(sha256sum "$helper" | awk '{print $1}')" != "$expected" ]; then
+    temporary=$(mktemp /tmp/reelio-statistics.XXXXXXXX)
+    helper=$temporary
+    curl --fail --silent --show-error --proto '=https' --connect-timeout 2 --max-time 5 https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/distribution/reelio-telemetry.py -o "$helper" || return 0
+  fi
+  [ "$(sha256sum "$helper" | awk '{print $1}')" = "$expected" ] || return 0
+  timeout 35s python3 "$helper" configure --target "$target" --project "$(value REELIO_PROJECT)" --event install --version "$(cat "$target/VERSION")" || true
+)
+
 start() {
   cd "$target"
   docker compose --env-file .env config --quiet
@@ -43,6 +62,7 @@ start() {
   docker compose --env-file .env up -d --pull never --wait --wait-timeout 180
   rm -f .reelio-setup-pending
   ready
+  statistics || say 'Optional statistics were skipped. Reelio is unaffected.'
 }
 
 [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || fail 'Reelio currently requires a Linux amd64/x86_64 server. Run this on that server, not on your Windows PC or Mac.'
@@ -73,7 +93,7 @@ run_update() {
     apt-get update
     apt-get install -y python3 curl ca-certificates coreutils
   fi
-  helper_sha=e115ac81de8365b1cf0c986b38c3069ca9cc6a9889a2b5b09ad375c83a9362e5
+  helper_sha=9d8b0aa3c074c4e88c4f5f53cb1b03434ed3bbc2087c3c7e65d8d9fe98e208b5
   helper_dir=$(dirname -- "$self")
   helper=$helper_dir/guided-update.py
   if [ ! -f "$helper" ]; then helper=$helper_dir/distribution/guided-update.py; fi
@@ -121,6 +141,8 @@ case "$answer" in
 esac
 say 'This wizard installs a fresh copy on this Linux server.'
 say 'To update an existing installation, choose option 2 instead.'
+say 'Optional install statistics are enabled by default: a random installation ID, version and broad platform, plus a daily healthy check-in. No accounts, media or integration credentials.'
+say 'Opt out: rerun with REELIO_TELEMETRY=0 or DO_NOT_TRACK=1. Details: https://telemetry.harveyjs.uk/privacy'
 if command -v systemd-detect-virt >/dev/null 2>&1 && [ "$(systemd-detect-virt 2>/dev/null || true)" = lxc ]; then
   say 'LXC detected. Docker must be permitted by your Proxmox/LXC configuration; this script does not change the host.'
 fi
@@ -193,13 +215,13 @@ else
 fi
 
 missing=false
-for tool in curl openssl tar gzip sha256sum ss ip; do command -v "$tool" >/dev/null 2>&1 || missing=true; done
+for tool in python3 curl openssl tar gzip sha256sum ss ip; do command -v "$tool" >/dev/null 2>&1 || missing=true; done
 if "$missing"; then
-  command -v apt-get >/dev/null 2>&1 || fail 'Install curl, ca-certificates, openssl, tar, gzip, coreutils and iproute2, then rerun.'
-  "$interactive" || fail 'Install curl, ca-certificates, openssl, tar, gzip, coreutils and iproute2 before unattended setup.'
+  command -v apt-get >/dev/null 2>&1 || fail 'Install python3, curl, ca-certificates, openssl, tar, gzip, coreutils and iproute2, then rerun.'
+  "$interactive" || fail 'Install python3, curl, ca-certificates, openssl, tar, gzip, coreutils and iproute2 before unattended setup.'
   yes 'Install the missing setup tools using apt?' y || fail 'Setup tools are required to continue.'
   apt-get update
-  apt-get install -y ca-certificates curl openssl tar gzip coreutils iproute2
+  apt-get install -y python3 ca-certificates curl openssl tar gzip coreutils iproute2
 fi
 scratch=$(mktemp -d /tmp/reelio-setup.XXXXXXXX)
 if ! command -v docker >/dev/null 2>&1; then
@@ -311,6 +333,7 @@ TRUST_PROXY=$trust
 DISPATCH_CONCURRENCY=4
 EOF
 chmod 600 "$target/.env"
+case "${REELIO_TELEMETRY:-1}:${DO_NOT_TRACK:-0}" in 0:*|false:*|FALSE:*|off:*|OFF:*|no:*|NO:*|*:1) [ -e "$target/.reelio-telemetry.disabled" ] || [ -L "$target/.reelio-telemetry.disabled" ] || (set -C; : > "$target/.reelio-telemetry.disabled");; esac
 printf '%s\n' reelio-setup-v1 > "$target/.reelio-setup-pending"
 say 'Preparing runtime images and starting Reelio. The first run can take a few minutes...'
 start

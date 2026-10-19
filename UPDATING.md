@@ -79,3 +79,18 @@ sudo sh backup.sh
 It briefly pauses API/web and creates a verified database/configuration backup. The guided updater's backup is more complete: it also retains the previous images and persistent mount contents.
 
 Manual, versioned bundle downloads remain available in [Releases](https://github.com/HSVEOCT/reelio-releases/releases). Older bundled `update.sh` helpers are for their documented public layouts; use the current guided script for the supported home migration layout.
+
+
+## Optional installation statistics
+
+Setup prints a reporting notice before installation or update confirmation. Successful installs/updates and daily healthy check-ins use a random installation ID and broad platform/version details, with no account or media data. Reporting defaults on; it is pseudonymous rather than fully anonymous.
+
+To opt out before running setup or an update:
+
+```sh
+sudo env REELIO_TELEMETRY=0 sh ./reelio-install.sh
+```
+
+`DO_NOT_TRACK=1` also works. The saved opt-out survives updates. After setup, run `sudo python3 /opt/reelio/reelio-telemetry.py disable --target /opt/reelio`, replacing the folder as needed. Daily reporting requires systemd; other hosts send only an initial successful-operation report. Telemetry failures never fail or roll back an installation/update. Compatibility-only checks, failed operations and cancelled operations do not report.
+
+Read [the reporting and retention details](PRIVACY.md#optional-installation-statistics).

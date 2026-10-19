@@ -83,3 +83,18 @@ For a connection problem, check the selected address, port and network access. F
 Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install option deliberately refuses occupied folders and projects. Choose option 2 for an existing installation; supported public and JSON migration layouts retain their data and settings.
 
 Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.18**, with guided service setup in the app.
+
+
+## Optional installation statistics
+
+Setup prints a reporting notice before installation or update confirmation. Successful installs/updates and daily healthy check-ins use a random installation ID and broad platform/version details, with no account or media data. Reporting defaults on; it is pseudonymous rather than fully anonymous.
+
+To opt out before running setup or an update:
+
+```sh
+sudo env REELIO_TELEMETRY=0 sh ./reelio-install.sh
+```
+
+`DO_NOT_TRACK=1` also works. The saved opt-out survives updates. After setup, run `sudo python3 /opt/reelio/reelio-telemetry.py disable --target /opt/reelio`, replacing the folder as needed. Daily reporting requires systemd; other hosts send only an initial successful-operation report. Telemetry failures never fail or roll back an installation/update. Compatibility-only checks, failed operations and cancelled operations do not report.
+
+Read [the reporting and retention details](PRIVACY.md#optional-installation-statistics).

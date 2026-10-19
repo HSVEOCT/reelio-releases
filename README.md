@@ -37,3 +37,7 @@ You can [support Reelio on Ko-fi](https://ko-fi.com/reelio). Donations are entir
 Application code and build workflows live in a separate private repository. Public files are copied through an explicit allowlist. The maintainer's home deployment has its own configuration, database and volumes and is never exposed by this website.
 
 Download the versioned application bundle and checksum from the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). Version 1.0.18 passed automated installation/update checks and home testing. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.
+
+## Installation statistics
+
+The installer reports successful installs/updates and daily healthy check-ins using a random installation ID and broad platform/version details. Reporting defaults on with a persistent opt-out; no account or media data is included. Read [what is collected, how long it is kept and how to disable it](PRIVACY.md#optional-installation-statistics).
