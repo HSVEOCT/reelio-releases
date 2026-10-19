@@ -252,7 +252,7 @@ class InstallerTests(unittest.TestCase):
         os.close(slave)
         output = b""
         try:
-            os.write(master, b"\n\n\n\n\ny\n")
+            os.write(master, b"\n\n\n\n\n\ny\n")
             deadline = time.monotonic() + 30
             while child.poll() is None and time.monotonic() < deadline:
                 if select.select([master], [], [], 0.1)[0]:

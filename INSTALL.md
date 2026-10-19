@@ -17,6 +17,8 @@ The script is public, so you can [read it before running it](https://github.com/
 
 ## Answer the questions
 
+First choose **1 — Install a fresh copy** or **2 — Update an existing installation**. For an update, follow [Update Reelio and keep your data](UPDATING.md). The remaining questions below are for a fresh installation.
+
 Press Enter to accept a suggested answer. Setup asks for:
 
 - **Installation folder:** normally `/opt/reelio`. It must be empty and dedicated to this installation.
@@ -76,6 +78,6 @@ For a connection problem, check the selected address, port and network access. F
 
 ## Existing installations and manual downloads
 
-Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install wizard deliberately refuses occupied folders and projects, including older custom deployments.
+Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install option deliberately refuses occupied folders and projects. Choose option 2 for an existing installation; supported public and JSON migration layouts retain their data and settings.
 
 Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The published 1.0.17 archive retains its original installer; the guided script above works with that exact verified package without modifying the release asset.
