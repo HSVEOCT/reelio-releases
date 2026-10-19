@@ -30,7 +30,7 @@ If logged in as root, omit `sudo`. Choose a fresh install or an update of an exi
 
 After creating your owner account, the in-app guide helps connect TMDB, Jellyfin and optional Radarr/Sonarr services. Test connections, select real profiles and folders, or skip services you do not use. You can resume from **Admin → Guided setup**.
 
-There is no donation account configured yet. Donations will be entirely optional and will not unlock features. Third-party metadata permissions must be confirmed separately; a donation model is not assumed to waive provider terms.
+You can [support Reelio on Ko-fi](https://ko-fi.com/reelio). Donations are entirely optional and do not unlock features or buy support or source-code access. Third-party metadata permissions must be confirmed separately; a donation model is not assumed to waive provider terms.
 
 ## Repository boundaries
 
