@@ -26,6 +26,14 @@ jobs:
       - name: Check owner setup and retained configuration
         run: |
           sudo python3 tests/smoke_installed.py /opt/reelio-wizard-ci
+      - name: Show website diagnostics if setup failed
+        if: failure()
+        run: |
+          if sudo test -f /opt/reelio-wizard-ci/.env; then
+            cd /opt/reelio-wizard-ci
+            sudo docker compose --env-file .env ps --all
+            sudo docker compose --env-file .env logs --tail 30 web
+          fi
       - name: Remove only this run's disposable installation
         if: always()
         run: |

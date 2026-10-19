@@ -83,6 +83,7 @@ class InstallerTests(unittest.TestCase):
             ".env.example", "docker-compose.yml", "backup.sh", "update.sh", "LICENSE.txt")}
         files.update({"VERSION": "1.0.17\n", "image-tag.txt": "1.0.17-test\n",
                       "build.json": '{"packaging":"compiled-application"}\n',
+                      "web/assets/app.js": "compiled browser fixture\n", "reelio-api": "compiled API fixture\n",
                       "prepare-images.sh": '#!/bin/sh\nprintf prepared > prepared\n'})
         files["SHA256SUMS"] = "".join(
             hashlib.sha256(content.encode()).hexdigest() + "  " + name + "\n"
@@ -91,6 +92,7 @@ class InstallerTests(unittest.TestCase):
             for name, content in files.items():
                 data = content.encode()
                 item = tarfile.TarInfo(name)
+                item.mode = 0o755 if name == "reelio-api" else 0o644
                 item.size = len(data)
                 archive.addfile(item, io.BytesIO(data))
         digest = hashlib.sha256((self.fixture / "archive.tar.gz").read_bytes()).hexdigest()
@@ -127,6 +129,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("http://127.0.0.1:43834", result.stdout)
         if os.name != "nt":
             self.assertEqual((self.target / ".env").stat().st_mode & 0o777, 0o600)
+            self.assertEqual((self.target / "web/assets").stat().st_mode & 0o777, 0o755)
+            self.assertEqual((self.target / "web/assets/app.js").stat().st_mode & 0o777, 0o644)
+            self.assertEqual((self.target / "reelio-api").stat().st_mode & 0o777, 0o755)
 
     def test_lan_detects_server_address(self):
         result = self.run_setup(REELIO_ACCESS="1", REELIO_PORT="43835")

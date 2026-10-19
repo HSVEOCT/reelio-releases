@@ -235,7 +235,9 @@ if [ ! -f "$bundle/SHA256SUMS" ]; then
   awk '/^\// || /(^|\/)\.\.(\/|$)/ || /[^a-zA-Z0-9_.\/-]/ {exit 1}' "$scratch/paths" || fail 'The archive contains an unexpected path.'
   tar -tvzf "$scratch/$archive" | awk 'substr($0,1,1)!="-" && substr($0,1,1)!="d" {exit 1}' || fail 'The archive contains links or special files.'
   mkdir "$scratch/bundle"
-  tar -xzf "$scratch/$archive" --no-same-owner --no-same-permissions -C "$scratch/bundle"
+  # Public application files must remain readable/executable by the image's
+  # unprivileged service users. Private configuration is created separately.
+  (umask 022; tar -xzf "$scratch/$archive" --no-same-owner --no-same-permissions -C "$scratch/bundle")
   bundle=$scratch/bundle
   [ "$(cat "$bundle/VERSION")" = "$version" ] || fail 'The downloaded application version does not match the release manifest.'
 fi
@@ -251,7 +253,7 @@ say "Installing Reelio $(cat "$bundle/VERSION")..."
 if [ -d "$target" ]; then rmdir -- "$target" || fail 'The destination is no longer empty.'; fi
 mkdir -p -- "$(dirname -- "$target")"
 mkdir -- "$target" || fail 'Cannot reserve the installation folder. Nothing was overwritten.'
-cp -R "$bundle/." "$target/"
+cp -a "$bundle/." "$target/"
 cp "$self" "$target/setup.sh"
 password=$(openssl rand -hex 32)
 cat > "$target/.env" <<EOF
