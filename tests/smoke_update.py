@@ -26,6 +26,10 @@ original_env = (ROOT / ".env").read_bytes()
 base = "http://127.0.0.1:" + config["REELIO_PORT"]
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 owner = json.loads((ROOT / ".ci-owner.json").read_text())
+# The older backup helper starts services without waiting for their health
+# checks. Establish a healthy baseline before invoking the strict updater.
+updater.run(["docker", "compose", "-f", str(ROOT / "docker-compose.yml"), "--env-file", str(ROOT / ".env"),
+             "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "180", "api", "web"])
 
 
 def call(path, payload=None):
