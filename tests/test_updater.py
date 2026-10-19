@@ -4,11 +4,14 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("updater", ROOT / "distribution/guided-update.py")
@@ -161,6 +164,74 @@ class UpdateRules(unittest.TestCase):
         self.assertIn(("volume", "legacy-codex"), storage)
         self.assertNotIn(("volume", "legacy-postgres"), storage)
         inspect.assert_called_once_with("volume", "inspect", "legacy-codex")
+
+    def test_missing_confirmation_terminal_reports_an_actionable_safe_error(self):
+        with patch.dict(os.environ, {"REELIO_NONINTERACTIVE": "0"}), patch("builtins.open", side_effect=OSError("private system detail")):
+            with self.assertRaisesRegex(updater.UpdateError, "interactive server console or SSH session") as error:
+                updater.ask("Accept the licence and update this installation?")
+        self.assertNotIn("private system detail", str(error.exception))
+
+    def test_closed_terminal_cancels_and_unattended_mode_cannot_prompt(self):
+        with patch.dict(os.environ, {"REELIO_NONINTERACTIVE": "0"}), patch("builtins.open", mock_open(read_data="")):
+            with self.assertRaisesRegex(updater.UpdateError, "terminal closed"):
+                updater.ask("Update?")
+        with patch.dict(os.environ, {"REELIO_NONINTERACTIVE": "1"}), patch("builtins.open") as terminal:
+            with self.assertRaisesRegex(updater.UpdateError, "explicit confirmation"):
+                updater.ask("Update?")
+            terminal.assert_not_called()
+
+    @unittest.skipUnless(sys.platform == "linux", "Controlling-terminal test runs on the Linux CI runner")
+    def test_confirmation_on_a_real_nonseekable_linux_terminal(self):
+        import fcntl
+        import pty
+        import select
+        import termios
+
+        def terminal():
+            os.setsid()
+            fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+
+        code = '''import io, json, runpy, sys
+try:
+    with open("/dev/tty", "r+"):
+        pass
+except io.UnsupportedOperation:
+    print("original-r-plus-fails", file=sys.stderr)
+ask = runpy.run_path(sys.argv[1])["ask"]
+print(json.dumps(ask("Accept the licence and update this installation?", "n")))
+'''
+        for reply, expected in ((b"y\n", "y"), (b"n\n", "n"), (b"\n", "n")):
+            with self.subTest(reply=reply):
+                master, slave = pty.openpty()
+                child = None
+                try:
+                    child = subprocess.Popen([sys.executable, "-c", code, str(ROOT / "distribution/guided-update.py")],
+                                             stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                             env=os.environ | {"REELIO_NONINTERACTIVE": "0"}, preexec_fn=terminal)
+                    os.close(slave)
+                    slave = None
+                    os.write(master, reply)
+                    output, errors = child.communicate(timeout=10)
+                    self.assertEqual(child.returncode, 0, errors.decode(errors="replace"))
+                    self.assertIn(b"original-r-plus-fails", errors)
+                    self.assertEqual(json.loads(output), expected)
+                    displayed = b""
+                    while select.select([master], [], [], 0)[0]:
+                        try:
+                            chunk = os.read(master, 65536)
+                        except OSError:
+                            break
+                        if not chunk:
+                            break
+                        displayed += chunk
+                    self.assertIn(b"Accept the licence and update this installation? [n]:", displayed)
+                finally:
+                    if child is not None and child.poll() is None:
+                        child.kill()
+                        child.wait()
+                    if slave is not None:
+                        os.close(slave)
+                    os.close(master)
 
 
 if __name__ == "__main__":
