@@ -47,7 +47,7 @@ start() {
 
 [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || fail 'Reelio currently requires a Linux amd64/x86_64 server. Run this on that server, not on your Windows PC or Mac.'
 [ "$(id -u)" = 0 ] || fail 'Run with sudo, or as root in your server console: sudo sh ./reelio-install.sh'
-self=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")
+self=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")
 scratch=''
 target=''
 cleanup() {
@@ -64,7 +64,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 if [ "$#" -gt 0 ]; then
   [ "$#" -eq 2 ] && [ "$1" = --resume ] || fail 'Usage: sh install.sh [--resume INSTALL-DIRECTORY]'
-  target=$(CDPATH= cd -- "$2" && pwd)
+  target=$(CDPATH='' cd -- "$2" && pwd)
   [ -f "$target/.env" ] && [ -f "$target/.reelio-setup-pending" ] && [ "$(cat "$target/.reelio-setup-pending")" = reelio-setup-v1 ] || fail 'This directory is not an interrupted guided installation. Existing installations must use the update guide.'
   command -v docker >/dev/null && docker info >/dev/null 2>&1 && docker compose version >/dev/null || fail 'Docker Engine and Compose v2 must be running before resuming.'
   endpoint=$(docker context inspect --format '{{.Endpoints.docker.Host}}')

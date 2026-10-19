@@ -61,7 +61,8 @@ class InstallerTests(unittest.TestCase):
           'context inspect '*) echo "${MOCK_ENDPOINT:-unix:///var/run/docker.sock}";;
           'ps -aq '*) [ "${MOCK_PROJECT_BUSY:-0}" != 1 ] || echo existing-container;;
           'ps --format '*) printf '%s' "${MOCK_PORT_MAPPING:-}";;
-          'volume ls '*|'network ls '*) :;;
+          'volume ls '*) [ "${MOCK_VOLUME_BUSY:-0}" != 1 ] || echo existing-volume;;
+          'network ls '*) [ "${MOCK_NETWORK_BUSY:-0}" != 1 ] || echo existing-network;;
           'compose version') [ "${MOCK_COMPOSE_MISSING:-0}" != 1 ];;
           'compose --env-file .env up '*) [ "${MOCK_START_FAIL:-0}" != 1 ];;
           'compose --env-file .env config --quiet') :;;
@@ -155,6 +156,12 @@ class InstallerTests(unittest.TestCase):
         self.run_setup(success=False, MOCK_PROJECT_BUSY="1")
         self.assertFalse(self.target.exists())
 
+    def test_stopped_project_storage_is_not_reused(self):
+        for values in ({"MOCK_VOLUME_BUSY": "1"}, {"MOCK_NETWORK_BUSY": "1"}):
+            with self.subTest(values=values):
+                self.run_setup(success=False, **values)
+                self.assertFalse(self.target.exists())
+
     def test_listener_collision_is_rejected(self):
         self.run_setup(success=False, MOCK_PORT_BUSY="1")
         self.assertFalse(self.target.exists())
@@ -182,6 +189,25 @@ class InstallerTests(unittest.TestCase):
             stream.write(b"corrupted")
         self.run_setup(success=False)
         self.assertFalse(self.target.exists())
+
+    def test_verified_archive_still_rejects_unsafe_members(self):
+        original = (self.fixture / "archive.tar.gz").read_bytes()
+        for name, member_type in (("../escape", tarfile.REGTYPE), ("linked", tarfile.SYMTYPE)):
+            with self.subTest(name=name):
+                with tarfile.open(fileobj=io.BytesIO(original), mode="r:gz") as source:
+                    with tarfile.open(self.fixture / "archive.tar.gz", "w:gz") as archive:
+                        for item in source.getmembers():
+                            archive.addfile(item, source.extractfile(item))
+                        item = tarfile.TarInfo(name)
+                        item.type = member_type
+                        item.linkname = "../escape" if member_type == tarfile.SYMTYPE else ""
+                        archive.addfile(item)
+                digest = hashlib.sha256((self.fixture / "archive.tar.gz").read_bytes()).hexdigest()
+                (self.fixture / "archive.sha256").write_text(digest + "  reelio-1.0.17-linux-amd64.tar.gz\n")
+                (self.fixture / "release.json").write_text(json.dumps({"version": "1.0.17", "sha256": digest}, indent=2) + "\n")
+                self.run_setup(success=False)
+                self.assertFalse(self.target.exists())
+                self.assertFalse((self.root / "escape").exists())
 
     def test_docker_failures_do_not_create_installation(self):
         for values in ({"MOCK_DOCKER_DOWN": "1"}, {"MOCK_COMPOSE_MISSING": "1"},
