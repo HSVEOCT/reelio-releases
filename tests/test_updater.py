@@ -65,6 +65,11 @@ class UpdateRules(unittest.TestCase):
         self.assertEqual(updater.escape_compose({"environment": ["literal$money", "https://example.test"], "port": 8787}),
                          {"environment": ["literal$$money", "https://example.test"], "port": 8787})
 
+    def test_rendered_compose_dollars_are_decoded_exactly_once(self):
+        installation = updater.Installation.__new__(updater.Installation)
+        installation.compose = lambda *args, **kwargs: json.dumps({"environment": {"ONE": "keep$$literal", "TWO": "keep$$$$literal"}})
+        self.assertEqual(installation.compose_json()["environment"], {"ONE": "keep$literal", "TWO": "keep$$literal"})
+
     def test_semantic_versions_are_numeric_and_unambiguous(self):
         self.assertGreater(updater.version_tuple("1.0.17"), updater.version_tuple("1.0.9"))
         for invalid in (None, "latest", "v1.0.17", "1.0.17\n", "1.0.17;anything"):
@@ -144,6 +149,18 @@ class UpdateRules(unittest.TestCase):
         self.assertEqual(command.call_count, 2)
         self.assertIn("sha256:old-api", command.call_args_list[0].args[0])
         self.assertIn("old-web", command.call_args_list[1].args[0])
+
+    def test_inactive_migration_volumes_without_labels_are_included(self):
+        installation = updater.Installation.__new__(updater.Installation)
+        installation.project = "legacy"
+        installation.pg_mounts = [{"Type": "volume", "Name": "legacy-postgres"}]
+        installation.rows = {"postgres": {"Id": "db", "Mounts": []}, "api": {"Id": "api", "Mounts": []}}
+        installation.config = {"volumes": {"database": {"name": "legacy-postgres"}, "codex": {"name": "legacy-codex"}}}
+        with patch.object(updater, "run", return_value=""), patch.object(updater, "docker_json", return_value=[{"Name": "legacy-codex"}]) as inspect:
+            storage = installation.backup_storage()
+        self.assertIn(("volume", "legacy-codex"), storage)
+        self.assertNotIn(("volume", "legacy-postgres"), storage)
+        inspect.assert_called_once_with("volume", "inspect", "legacy-codex")
 
 
 if __name__ == "__main__":

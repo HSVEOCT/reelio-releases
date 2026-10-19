@@ -276,7 +276,9 @@ class Installation:
         pg_version = int(self.sql("SHOW server_version_num").strip())
         require(180000 <= pg_version < 190000, "Guided updates currently support PostgreSQL 18 only; database major versions are never changed.")
         self.pg_mounts = mounts(self.rows["postgres"])
-        require(any(item["Type"] in ("volume", "bind") and item["Destination"].startswith("/var/lib/postgresql") for item in self.pg_mounts), "A persistent PostgreSQL mount was not found.")
+        require(any(item["Type"] == "volume" and item["Destination"].startswith("/var/lib/postgresql") for item in self.pg_mounts)
+                and not any(item["Type"] == "bind" and item["Destination"].startswith("/var/lib/postgresql") for item in self.pg_mounts),
+                "Guided updates require PostgreSQL data in a Docker named volume. Bind-mounted databases need separate review.")
         self.current = self.health_version()
         require(version_tuple(self.current) >= (1, 0, 14), "This older application needs a separately planned migration.")
         self.stage = None
@@ -300,7 +302,10 @@ class Installation:
         return run(self.command(files) + list(args), label="Compose operation")
 
     def compose_json(self, files=None):
-        return json.loads(self.compose("config", "--format", "json", files=files))
+        # Compose's config command doubles every literal dollar in its rendered
+        # JSON for reuse as a Compose file. Undo exactly that rendering layer
+        # before comparing to live environment values or serializing again.
+        return json.loads(self.compose("config", "--format", "json", files=files).replace("$$", "$"))
 
     def inspect(self):
         ids = run(["docker", "ps", "-aq", "--filter", f"label=com.docker.compose.project={self.project}"]).split()
@@ -380,6 +385,17 @@ class Installation:
         for name in names:
             if name not in database_volumes:
                 selected.setdefault(("volume", name), {"Type": "volume", "Name": name, "Destination": None})
+        # Migration restores may have created declared volumes by name without
+        # Compose labels. Include existing, inactive storage too; never create it.
+        for definition in self.config.get("volumes", {}).values():
+            name = definition.get("name")
+            if not name or name in database_volumes or ("volume", name) in selected:
+                continue
+            try:
+                docker_json("volume", "inspect", name)
+            except UpdateError:
+                continue
+            selected[("volume", name)] = {"Type": "volume", "Name": name, "Destination": None}
         for kind, source in selected:
             require("," not in source and "\n" not in source, "A data mount path needs a separately planned backup.")
         return selected
@@ -407,7 +423,7 @@ class Installation:
         self.backup.mkdir(mode=0o700)
         private_json(self.backup / "containers.json", self.rows)
         private_json(self.backup / "compose-resolved.json", self.config)
-        private_json(self.backup / "storage.json", [{"type": kind, "source": source, "mount": value} for (kind, source), value in storage.items()])
+        private_json(self.backup / "storage.json", [{"archive": f"storage-{index}.tar.gz", "type": kind, "source": source, "mount": value} for index, ((kind, source), value) in enumerate(storage.items())])
         for name in ("api", "web", "postgres"):
             tag = f"reelio-rollback/{name}:{stamp.lower()}"
             run(["docker", "image", "tag", self.rows[name]["Image"], tag], label="Retaining previous images")
@@ -578,6 +594,9 @@ def main():
                     bundle = release_bundle(manifest, work)
                 tag = (bundle / "image-tag.txt").read_text().strip()
                 installation.plan(tag)
+                docker_root = Path(run(["docker", "info", "--format", "{{.DockerRootDir}}"], label="Docker storage check").strip())
+                require(docker_root.is_dir() and shutil.disk_usage(docker_root).free >= 1024 * 1024 * 1024,
+                        "Docker needs at least 1 GiB free before preparing update images.")
                 print("Preparing the application images while the current app stays online...")
                 installation.prepared = True
                 run(["sh", str(bundle / "prepare-images.sh")], label="Preparing official application runtime images")

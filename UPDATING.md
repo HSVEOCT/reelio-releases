@@ -47,7 +47,7 @@ For a one-file layout, the updater writes the resolved configuration back as pri
 
 For the migration layout, the base file is untouched. Only the API/web image and pull-policy fields in the existing JSON override change. Source build paths are retained but not used to build the new app.
 
-Custom YAML overrides, external databases, replicas, running optional workers and inconsistent saved/running settings need separate review. The wizard refuses them before deployment rather than guessing how to migrate them. Stop an optional worker before updating; its retained data is backed up. This does not install or enable an AI worker.
+Custom YAML overrides, external or bind-mounted databases, replicas, running optional workers and inconsistent saved/running settings need separate review. The wizard refuses them before deployment rather than guessing how to migrate them. Stop an optional worker before updating; its retained data is backed up. This does not install or enable an AI worker.
 
 ## After the update
 

@@ -73,7 +73,7 @@ run_update() {
     apt-get update
     apt-get install -y python3 curl ca-certificates coreutils
   fi
-  helper_sha=690a56b315f73f664f1ecddb6f191ebac66c7f5b94867754b1bcf012473164fa
+  helper_sha=039f906632a5637196fd6d65504575bf4d76d486c4bcc96be188efc3b3ae4648
   helper_dir=$(dirname -- "$self")
   helper=$helper_dir/guided-update.py
   if [ ! -f "$helper" ]; then helper=$helper_dir/distribution/guided-update.py; fi
