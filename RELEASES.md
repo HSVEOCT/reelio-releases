@@ -11,9 +11,9 @@ Preview releases are marked as prereleases. A stable release is an explicit prom
 
 ## Current status
 
-[Reelio 1.0.17 is the current stable release](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.17). Its exact home-tested archive is available with a SHA256 checksum. Donations are not configured.
+[Reelio 1.0.18 is the current stable release](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.18). Its exact home-tested archive is available with a SHA256 checksum. Donations are not configured.
 
-Archive SHA256: `59007f285ded87712fcb961a4bc8eaf319e5110a506d91779a770287d71600e3`.
+Archive SHA256: `038daa8e063031878e52beb3c49baac58cb48f2bdd4a4a8c039397fbf2e33e85`.
 
 ## What to keep
 

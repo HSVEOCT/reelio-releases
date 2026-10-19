@@ -35,9 +35,11 @@ The wizard downloads the current stable release **directly to your server**, che
 
 When setup finishes, open the address it prints in a browser on your computer.
 
-1. Create your owner account.
-2. Open **Admin → Integrations** and add your own TMDB credentials to enable discovery.
-3. Connect Jellyfin and any optional services you use, then test them.
+1. Create your owner account. The guided setup opens automatically.
+2. Add your own TMDB credentials to enable discovery, then connect Jellyfin if you use it.
+3. Optionally connect Radarr and Sonarr. Test each connection and choose from the quality profiles and root folders returned by your service.
+
+You can skip services you do not use or pause and return through **Admin → Guided setup**. Existing installations open normally after an update; their owners can open the guide from Admin, keeping saved credentials and other settings.
 
 Keep the server and chosen address reachable from your household's network. Create your owner account before inviting other people.
 
@@ -80,4 +82,4 @@ For a connection problem, check the selected address, port and network access. F
 
 Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install option deliberately refuses occupied folders and projects. Choose option 2 for an existing installation; supported public and JSON migration layouts retain their data and settings.
 
-Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The published 1.0.17 archive retains its original installer; the guided script above works with that exact verified package without modifying the release asset.
+Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.18**, with guided service setup in the app.
