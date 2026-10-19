@@ -206,12 +206,16 @@ def without_application_images(config):
 
 def ask(question, default="n"):
     require(os.environ.get("REELIO_NONINTERACTIVE") != "1", "Unattended updates need explicit confirmation settings.")
-    with open("/dev/tty", "r+") as terminal:
-        terminal.write(f"{question} [{default}]: ")
-        terminal.flush()
-        reply = terminal.readline()
-        require(reply != "", "Update cancelled: terminal closed.")
-        return reply.strip() or default
+    try:
+        # Buffered update mode (r+) requires seeking; Linux terminals cannot seek.
+        with open("/dev/tty", "r", encoding="utf-8") as reader, open("/dev/tty", "w", encoding="utf-8") as writer:
+            writer.write(f"{question} [{default}]: ")
+            writer.flush()
+            reply = reader.readline()
+    except OSError as error:
+        raise UpdateError("Could not read the confirmation terminal. Run the updater from an interactive server console or SSH session.") from error
+    require(reply != "", "Update cancelled: terminal closed.")
+    return reply.strip() or default
 
 
 def candidates():
