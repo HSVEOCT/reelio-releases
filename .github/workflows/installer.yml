@@ -2,9 +2,9 @@ name: Guided installer
 on:
   push:
     branches: [main]
-    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'tests/**', '.github/workflows/installer.yml']
+    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'distribution/reelio-telemetry.py', 'tests/**', '.github/workflows/installer.yml']
   pull_request:
-    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'tests/**', '.github/workflows/installer.yml']
+    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'distribution/reelio-telemetry.py', 'tests/**', '.github/workflows/installer.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,6 +12,10 @@ jobs:
   install:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Disposable CI installations must never inflate real usage statistics.
+      DO_NOT_TRACK: '1'
+      REELIO_TELEMETRY: '0'
     steps:
       - uses: actions/checkout@v4
       - name: Check shell and host scenarios
@@ -19,17 +23,16 @@ jobs:
           sh -n install.sh
           shellcheck -S warning install.sh
           cmp install.sh distribution/install.sh
-          python3 tests/test_installer.py
-          python3 tests/test_updater.py
+          python3 -m unittest discover -s tests -v
       - name: Install the published package on an isolated local port
         run: |
-          sudo env REELIO_NONINTERACTIVE=1 REELIO_ACCEPT_LICENSE=1 REELIO_ACCESS=3 REELIO_PROJECT=reelio-wizard-ci-${{ github.run_id }} REELIO_INSTALL_DIR=/opt/reelio-wizard-ci sh install.sh
+          sudo env DO_NOT_TRACK=1 REELIO_TELEMETRY=0 REELIO_NONINTERACTIVE=1 REELIO_ACCEPT_LICENSE=1 REELIO_ACCESS=3 REELIO_PROJECT=reelio-wizard-ci-${{ github.run_id }} REELIO_INSTALL_DIR=/opt/reelio-wizard-ci sh install.sh
       - name: Check owner setup and retained configuration
         run: |
           sudo python3 tests/smoke_installed.py /opt/reelio-wizard-ci
       - name: Check public and legacy updates and failed-version recovery
         run: |
-          sudo python3 tests/smoke_update.py /opt/reelio-wizard-ci
+          sudo env DO_NOT_TRACK=1 REELIO_TELEMETRY=0 python3 tests/smoke_update.py /opt/reelio-wizard-ci
       - name: Show website diagnostics if setup failed
         if: failure()
         run: |

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -39,7 +40,7 @@ class InstallerTests(unittest.TestCase):
                 self.env.pop(key)
         self.env.update(
             PATH=str(self.bin) + os.pathsep + self.env["PATH"],
-            REELIO_NONINTERACTIVE="1", REELIO_ACCEPT_LICENSE="1",
+            REELIO_NONINTERACTIVE="1", REELIO_ACCEPT_LICENSE="1", REELIO_TELEMETRY="0",
             REELIO_INSTALL_DIR=shell_path(self.target), REELIO_ACCESS="3",
             FIXTURE=shell_path(self.fixture), MOCK_ROOT=shell_path(self.root),
             MOCK_LOG=shell_path(self.log),
@@ -48,6 +49,7 @@ class InstallerTests(unittest.TestCase):
             self.env["PATH"] = shell_path(self.bin) + ":/usr/bin:/bin"
         self.tool("uname", 'case "$1" in -s) echo Linux;; -m) echo x86_64;; esac')
         self.tool("id", "echo 0")
+        self.tool("python3", 'exec "' + shell_path(sys.executable) + '" "$@"')
         self.tool("systemd-detect-virt", "echo none")
         self.tool("ip", '''case "$*" in
           *route*) echo '1.1.1.1 via 192.168.4.1 dev eth0 src 192.168.4.10';;
@@ -106,7 +108,11 @@ class InstallerTests(unittest.TestCase):
 
     def run_setup(self, *args, success=True, **changes):
         env = self.env | changes
-        result = subprocess.run([SHELL, str(ROOT / "install.sh"), *args], env=env,
+        shell_args = [SHELL, str(ROOT / "install.sh"), *args]
+        if os.name == "nt":
+            env["REELIO_TEST_PATH"] = env["PATH"]
+            shell_args = [SHELL, "-c", 'PATH="$REELIO_TEST_PATH"; export PATH; . "$0"', str(ROOT / "install.sh"), *args]
+        result = subprocess.run(shell_args, env=env,
                                 text=True, capture_output=True, timeout=30)
         if success:
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

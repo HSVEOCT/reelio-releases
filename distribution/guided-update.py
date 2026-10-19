@@ -541,6 +541,32 @@ class Installation:
                 run(["docker", "image", "tag", self.rows[name]["Image"], reference], label="Restoring the previous image selection")
 
 
+
+def report_statistics(target, project, version):
+    """Only called after a verified successful update; never changes its result."""
+    expected = "d5aaf1727d23c250feea3ab1f4009e1865a852f42a7147d422bbf0298e557ab9"
+    try:
+        if os.environ.get("REELIO_TELEMETRY", "").lower() in {"0", "false", "off", "no"} or os.environ.get("DO_NOT_TRACK") == "1":
+            try:
+                marker = os.open(target / ".reelio-telemetry.disabled", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(marker)
+            except FileExistsError:
+                pass
+        candidates = [Path(__file__).parent / "reelio-telemetry.py", Path(__file__).parent / "distribution/reelio-telemetry.py"]
+        with tempfile.TemporaryDirectory(prefix="reelio-statistics-") as work:
+            helper = next((path for path in candidates if path.is_file() and digest(path) == expected), None)
+            if helper is None:
+                helper = Path(work) / "reelio-telemetry.py"
+                request = urllib.request.Request("https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/distribution/reelio-telemetry.py", headers={"User-Agent": "Reelio-installer"})
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    content = response.read(128 * 1024 + 1)
+                require(len(content) <= 128 * 1024, "Statistics helper is too large.")
+                helper.write_bytes(content)
+            require(digest(helper) == expected, "Statistics helper checksum differs.")
+            subprocess.run([sys.executable, str(helper), "configure", "--target", str(target), "--project", project, "--event", "update", "--version", version], check=False, timeout=35)
+    except (Exception, KeyboardInterrupt):
+        print("Optional install statistics were skipped. The successful update is unaffected.")
+
 def main():
     parser = argparse.ArgumentParser(description="Update an existing Reelio installation while retaining its data and setup.")
     parser.add_argument("--target")
@@ -588,6 +614,7 @@ def main():
                     elif ask("Already on this version. Reapply the same release?", "n").lower() not in ("y", "yes"):
                         print("Nothing was changed.")
                         return
+                print("Optional install statistics: random installation ID, version and broad platform; daily healthy check-ins. Opt out with REELIO_TELEMETRY=0 or DO_NOT_TRACK=1. Details: https://telemetry.harveyjs.uk/privacy")
                 print(f"\nLicence: {REPOSITORY}/blob/main/LICENSE.txt\nThe updater will save a private full backup, briefly pause API/web, update their images and verify retained data.")
                 if os.environ.get("REELIO_NONINTERACTIVE") == "1":
                     require(os.environ.get("REELIO_ACCEPT_LICENSE") == "1" and os.environ.get("REELIO_UPDATE_CONFIRM") == "1", "Unattended updates require REELIO_ACCEPT_LICENSE=1 and REELIO_UPDATE_CONFIRM=1.")
@@ -609,6 +636,7 @@ def main():
                 storage = installation.backup_storage()
                 installation.create_backup(storage)
                 installation.apply(selected, tag)
+                report_statistics(target, installation.project, selected)
         except BaseException:
             try:
                 installation.rollback()
