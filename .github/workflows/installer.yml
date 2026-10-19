@@ -1,0 +1,41 @@
+name: Guided installer
+on:
+  push:
+    branches: [main]
+    paths: ['install.sh', 'distribution/install.sh', 'tests/**', '.github/workflows/installer.yml']
+  pull_request:
+    paths: ['install.sh', 'distribution/install.sh', 'tests/**', '.github/workflows/installer.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell and host scenarios
+        run: |
+          sh -n install.sh
+          shellcheck -S warning install.sh
+          cmp install.sh distribution/install.sh
+          python3 tests/test_installer.py
+      - name: Install the published package on an isolated local port
+        run: |
+          sudo env REELIO_NONINTERACTIVE=1 REELIO_ACCEPT_LICENSE=1 REELIO_ACCESS=3 REELIO_PROJECT=reelio-wizard-ci-${{ github.run_id }} REELIO_INSTALL_DIR=/opt/reelio-wizard-ci sh install.sh
+      - name: Check owner setup and retained configuration
+        run: |
+          sudo python3 tests/smoke_installed.py /opt/reelio-wizard-ci
+      - name: Show website diagnostics if setup failed
+        if: failure()
+        run: |
+          if sudo test -f /opt/reelio-wizard-ci/.env; then
+            sudo docker compose -f /opt/reelio-wizard-ci/docker-compose.yml --env-file /opt/reelio-wizard-ci/.env ps --all
+            sudo docker compose -f /opt/reelio-wizard-ci/docker-compose.yml --env-file /opt/reelio-wizard-ci/.env logs --tail 30 web
+          fi
+      - name: Remove only this run's disposable installation
+        if: always()
+        run: |
+          if sudo test -f /opt/reelio-wizard-ci/.env; then
+            sudo docker compose -f /opt/reelio-wizard-ci/docker-compose.yml --env-file /opt/reelio-wizard-ci/.env down --volumes
+          fi

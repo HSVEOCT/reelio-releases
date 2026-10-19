@@ -17,6 +17,17 @@ Reelio is free for personal, non-commercial self-hosting under the [Reelio Perso
 
 Requires a Linux amd64 Docker host with Docker Compose v2 and internet access during installation or an update. Docker obtains official runtime components directly from their upstream distributors. The first release targets Jellyfin, with optional Radarr and Sonarr integrations. No films, TV files, accounts, metadata credentials or download-service subscriptions are included.
 
+## Guided setup
+
+Run these commands in your **Linux server's terminal** (a Proxmox container console works too):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/install.sh -o reelio-install.sh
+sudo sh ./reelio-install.sh
+```
+
+If logged in as root, omit `sudo`. The wizard asks how you want to connect, downloads the stable release directly to your server, checks it and prints the address to open. Normal LAN setup needs no SCP or tunnel. It can offer Docker installation on Ubuntu/Debian if needed. [Read the short guide](INSTALL.md) for requirements and existing installations.
+
 There is no donation account configured yet. Donations will be entirely optional and will not unlock features. Third-party metadata permissions must be confirmed separately; a donation model is not assumed to waive provider terms.
 
 ## Repository boundaries
