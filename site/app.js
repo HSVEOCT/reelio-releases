@@ -14,7 +14,7 @@ async function configurePage() {
       const url = new URL(release.downloadUrl);
       if (url.origin !== 'https://github.com' || !url.pathname.startsWith('/HSVEOCT/reelio-releases/releases/download/')) throw new Error('Invalid release URL');
       document.querySelector('#release-label').textContent = `Reelio ${release.version} · ${release.channel === 'stable' ? 'Stable release' : 'Preview release'}`;
-      document.querySelector('#release-detail').textContent = release.channel === 'stable' ? 'Built, checked and tested at home. Run the guided installer on your Linux server; it downloads and sets up Reelio for you.' : 'An early build for testing. Keep a backup and read the release notes before installing.';
+      document.querySelector('#release-detail').textContent = release.channel === 'stable' ? 'Built and checked, with the release approved by the maintainer. Run the guided installer on your Linux server; it downloads and sets up Reelio for you.' : 'An early build for testing. Keep a backup and read the release notes before installing.';
       const download = document.querySelector('#download-button');
       download.href = url.href;
       download.textContent = `Manual bundle ${release.version} ↓`;
