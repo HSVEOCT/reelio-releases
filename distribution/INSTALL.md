@@ -1,6 +1,6 @@
 # Install Reelio
 
-Public downloads are being prepared. These instructions apply to an official versioned release bundle. Cloning the documentation repository does not install the application.
+Download an official versioned release bundle from [Releases](https://github.com/HSVEOCT/reelio-releases/releases). These instructions apply to that bundle. Cloning the documentation repository does not install the application.
 
 ## Requirements
 

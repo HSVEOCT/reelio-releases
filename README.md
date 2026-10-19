@@ -4,7 +4,7 @@ A home for your family's next film night. Discover movies and shows, request mis
 
 **[Visit the Reelio website](https://hsveoct.github.io/reelio-releases/)**
 
-**Public distribution is being prepared. No stable download has been published yet.**
+**[Reelio 1.0.17 is available to download](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.17).**
 
 Reelio is free for personal, non-commercial self-hosting under the [Reelio Personal Use Licence](LICENSE.txt). The application source is private. This repository contains the public website, documentation and installation helpers; release bundles contain the compiled API, browser assets and runtime assembly files. Application source is not included.
 
@@ -23,4 +23,4 @@ There is no donation account configured yet. Donations will be entirely optional
 
 Application code and build workflows live in a separate private repository. Public files are copied through an explicit allowlist. The maintainer's home deployment has its own configuration, database and volumes and is never exposed by this website.
 
-The first download will appear on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases) after build checks and home testing. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.
+Download the versioned application bundle and checksum from the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). Version 1.0.17 passed automated installation/update checks and home testing. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.

@@ -11,7 +11,9 @@ Preview releases are marked as prereleases. A stable release is an explicit prom
 
 ## Current status
 
-The first public download is being prepared. There is no published stable release yet. The website therefore keeps its preparation status instead of showing a download link. Donations are not configured.
+[Reelio 1.0.17 is the current stable release](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.17). Its exact home-tested archive is available with a SHA256 checksum. Donations are not configured.
+
+Archive SHA256: `59007f285ded87712fcb961a4bc8eaf319e5110a506d91779a770287d71600e3`.
 
 ## What to keep
 

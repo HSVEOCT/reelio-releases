@@ -1,7 +1,7 @@
 {
-  "version": null,
-  "channel": "preparation",
-  "downloadUrl": null,
-  "sha256": null,
+  "version": "1.0.17",
+  "channel": "stable",
+  "downloadUrl": "https://github.com/HSVEOCT/reelio-releases/releases/download/v1.0.17/reelio-1.0.17-linux-amd64.tar.gz",
+  "sha256": "59007f285ded87712fcb961a4bc8eaf319e5110a506d91779a770287d71600e3",
   "donationUrl": null
 }
