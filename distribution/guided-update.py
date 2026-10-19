@@ -425,5 +425,235 @@ class Installation:
         require(shutil.disk_usage(parent).free > estimate + 256 * 1024 * 1024, "Not enough free space for the database, application files, old images and data-volume backups.")
         self.backup = parent / stamp
         self.backup.mkdir(mode=0o700)
-        private_…4362 tokens truncated…se 'Update could not finish; inspect the saved backup and server prerequisites.'}", file=sys.stderr)
+        private_json(self.backup / "containers.json", self.rows)
+        private_json(self.backup / "compose-resolved.json", self.config)
+        private_json(self.backup / "storage.json", [{"archive": f"storage-{index}.tar.gz", "type": kind, "source": source, "mount": value} for index, ((kind, source), value) in enumerate(storage.items())])
+        for name in ("api", "web", "postgres"):
+            tag = f"reelio-rollback/{name}:{stamp.lower()}"
+            run(["docker", "image", "tag", self.rows[name]["Image"], tag], label="Retaining previous images")
+            self.rollback_tags[name] = tag
+        # Save images while the old app remains online; no lengthy build or
+        # image export belongs in the application downtime window.
+        process = subprocess.Popen(["docker", "image", "save", *self.rollback_tags.values()], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        try:
+            with gzip.open(self.backup / "images.tar.gz", "wb") as destination:
+                shutil.copyfileobj(process.stdout, destination)
+        finally:
+            process.stdout.close()
+            status = process.wait()
+        require(status == 0, "Could not save the previous images. The application was left running.")
+        with tarfile.open(self.backup / "images.tar.gz", "r:gz") as archive:
+            require(archive.getmember("manifest.json").isfile(), "The image backup is invalid.")
+            archive.getmembers()
+        with tarfile.open(self.backup / "application.tar.gz", "w:gz", dereference=False) as archive:
+            archive.add(self.target, arcname=self.target.name, filter=lambda member: None if "/.reelio-update-" in member.name else member)
+        print(f"\nPrevious images and configuration saved. Pausing API/web for the final database and data backup...\nPrivate backup folder: {self.backup}")
+        self.paused = True
+        self.compose("stop", "--timeout", "60", "web", "api")
+        self.before = self.snapshot()
+        private_json(self.backup / "data-before.json", self.before)
+        with (self.backup / "database.dump").open("wb") as destination:
+            run(["docker", "exec", self.rows["postgres"]["Id"], "sh", "-ec", 'exec pg_dump -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-${POSTGRES_USER:-postgres}}" -Fc'], output_file=destination, label="Database backup")
+        with (self.backup / "database.dump").open("rb") as source:
+            run(["docker", "exec", "-i", self.rows["postgres"]["Id"], "pg_restore", "--file=/dev/null"], input_file=source, label="Reading and verifying the complete database backup")
+        for index, ((kind, source), _) in enumerate(storage.items()):
+            with (self.backup / f"storage-{index}.tar.gz").open("wb") as destination:
+                run(self.storage_command(kind, source, "if [ -d /source ]; then tar -czf - -C /source .; else tar -czf - -C / source; fi"), output_file=destination, label="Persistent data backup")
+            with tarfile.open(self.backup / f"storage-{index}.tar.gz", "r:gz") as archive:
+                archive.getmembers()
+        private_json(self.backup / "verified.json", {"version": self.current, "project": self.project, "imageTags": self.rollback_tags,
+                     "files": {path.name: digest(path) for path in self.backup.iterdir() if path.is_file()}})
+        print(f"Backup verified. Retaining {len(self.before['users'])} users and {len(self.before['requests'])} requests.")
+
+    def check_new_backup_permissions(self, tag):
+        directory = environment(self.rows["api"]).get("BACKUP_DIR", "/backups")
+        data_mount = next((item for item in self.rows["api"].get("Mounts", []) if item["Destination"] == directory), None)
+        require(data_mount and data_mount["Type"] in ("volume", "bind") and data_mount["RW"], "The API backup directory needs a supported writable persistent mount.")
+        source = data_mount.get("Name") if data_mount["Type"] == "volume" else data_mount["Source"]
+        require("," not in source and "," not in directory, "The backup mount path needs manual review.")
+        args = ["docker", "run", "--rm", "--network", "none", "--read-only"]
+        if self.config["services"]["api"].get("user"):
+            args += ["--user", self.config["services"]["api"]["user"]]
+        args += ["--mount", f"type={data_mount['Type']},src={source},dst={directory}", "--entrypoint", "sh", f"reelio/api:{tag}", "-ec", 'test -w "$1"', "sh", directory]
+        run(args, label="New application backup-directory permission check (no permissions were changed)")
+
+    def apply(self, version, tag):
+        self.verify_unchanged()
+        self.changed = True
+        self.stage.replace(self.files[-1])
+        self.stage = None
+        self.compose("up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "180", "api")
+        after = self.snapshot()
+        private_json(self.backup / "data-after.json", after)
+        try:
+            retained(self.before, after)
+        except UpdateError:
+            self.data_failed = True
+            raise
+        now = self.inspect()
+        require(now["postgres"]["Id"] == self.rows["postgres"]["Id"] and now["postgres"]["Image"] == self.rows["postgres"]["Image"] and mounts(now["postgres"]) == self.pg_mounts, "PostgreSQL changed unexpectedly.")
+        for name in ("api",):
+            require(mounts(now[name]) == mounts(self.rows[name]), "Application storage changed unexpectedly.")
+            for key, value in self.config["services"][name].get("environment", {}).items():
+                require(environment(now[name]).get(key) == str(value), "Application settings changed unexpectedly.")
+        result = json.loads(run(["docker", "exec", now["api"]["Id"], "wget", "-qO-", "http://127.0.0.1:8080/api/health"], label="Updated version check"))
+        require(result.get("version") == version, "The updated API reports an unexpected version.")
+        self.compose("up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "180", "web")
+        now = self.inspect()
+        require(now["web"]["HostConfig"]["PortBindings"] == self.rows["web"]["HostConfig"]["PortBindings"] and mounts(now["web"]) == mounts(self.rows["web"]), "The web port or storage changed unexpectedly.")
+        require((self.env_path.read_bytes() if self.env_path.exists() else None) == self.env_original, "Private environment settings changed unexpectedly.")
+        (self.target / "VERSION").write_text(version + "\n")
+        (self.target / "image-tag.txt").write_text(tag + "\n")
+        private_json(self.backup / "update-passed.json", {"from": self.current, "to": version, "usersRetained": len(self.before["users"]), "requestsRetained": len(self.before["requests"])})
+        print(f"\nUpdate passed: Reelio {version}. Original users, requests, integration settings, branding, storage and port retained.\nPrivate backup: {self.backup}\nCopy this entire private backup folder off the server. Never upload it to a public issue.")
+        self.changed = self.paused = False
+
+    def rollback(self):
+        if not self.paused:
+            if self.prepared:
+                self.restore_image_references()
+            return
+        print("\nUpdate stopped. Recovering the previous application configuration and images...", file=sys.stderr)
+        if self.changed:
+            self.compose("stop", "--timeout", "30", "web", "api")
+            for path, content in self.originals.items():
+                path.write_bytes(content)
+            for name, content in self.old_metadata.items():
+                path = self.target / name
+                if content is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_bytes(content)
+            self.restore_image_references()
+            self.compose("up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "180", "api")
+            if not self.data_failed:
+                self.compose("up", "-d", "--no-deps", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "180", "web")
+        else:
+            self.compose("start", "api", "web")
+        print(f"Previous application selected. The database was NOT automatically restored. Backup: {self.backup}", file=sys.stderr)
+        if self.data_failed:
+            print("Data verification needs investigation. Web remains stopped; use the verified backup and recovery guide.", file=sys.stderr)
+
+    def restore_image_references(self):
+        for name in ("api", "web"):
+            reference = self.config["services"][name]["image"]
+            if not reference.startswith("sha256:") and "@sha256:" not in reference:
+                run(["docker", "image", "tag", self.rows[name]["Image"], reference], label="Restoring the previous image selection")
+
+
+
+def report_statistics(target, project, version):
+    """Only called after a verified successful update; never changes its result."""
+    expected = "d5aaf1727d23c250feea3ab1f4009e1865a852f42a7147d422bbf0298e557ab9"
+    try:
+        if os.environ.get("REELIO_TELEMETRY", "").lower() in {"0", "false", "off", "no"} or os.environ.get("DO_NOT_TRACK") == "1":
+            try:
+                marker = os.open(target / ".reelio-telemetry.disabled", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(marker)
+            except FileExistsError:
+                pass
+        candidates = [Path(__file__).parent / "reelio-telemetry.py", Path(__file__).parent / "distribution/reelio-telemetry.py"]
+        with tempfile.TemporaryDirectory(prefix="reelio-statistics-") as work:
+            helper = next((path for path in candidates if path.is_file() and digest(path) == expected), None)
+            if helper is None:
+                helper = Path(work) / "reelio-telemetry.py"
+                request = urllib.request.Request("https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/distribution/reelio-telemetry.py", headers={"User-Agent": "Reelio-installer"})
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    content = response.read(128 * 1024 + 1)
+                require(len(content) <= 128 * 1024, "Statistics helper is too large.")
+                helper.write_bytes(content)
+            require(digest(helper) == expected, "Statistics helper checksum differs.")
+            subprocess.run([sys.executable, str(helper), "configure", "--target", str(target), "--project", project, "--event", "update", "--version", version], check=False, timeout=35)
+    except (Exception, KeyboardInterrupt):
+        print("Optional install statistics were skipped. The successful update is unaffected.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Update an existing Reelio installation while retaining its data and setup.")
+    parser.add_argument("--target")
+    parser.add_argument("--check", action="store_true", help="Inspect compatibility without building images or stopping services")
+    parser.add_argument("--bundle", type=Path, help="Use an already downloaded verified compiled bundle")
+    args = parser.parse_args()
+    require(sys.platform == "linux" and os.uname().machine == "x86_64" and os.geteuid() == 0, "Run this on the Linux amd64 Docker server with sudo or as root.")
+    os.umask(0o077)
+    run(["docker", "info"], label="Docker availability check")
+    endpoint = run(["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"], label="Docker context check").strip()
+    if not os.environ.get("DOCKER_CONTEXT"):
+        endpoint = os.environ.get("DOCKER_HOST", endpoint)
+    require(endpoint.startswith("unix://"), "Remote Docker contexts are not supported. Run setup on the Docker host.")
+    target = select_target(args.target)
+    with ExitStack() as resources:
+        lock = os.open(target, os.O_RDONLY | os.O_DIRECTORY)
+        resources.callback(os.close, lock)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise UpdateError("Another guided update is already using this directory.") from error
+        installation = Installation(target)
+        try:
+            with tempfile.TemporaryDirectory(prefix="reelio-update-") as temporary:
+                work = Path(temporary)
+                if args.bundle:
+                    bundle = args.bundle.resolve(strict=True)
+                    selected = validate_bundle(bundle)
+                    manifest = None
+                else:
+                    manifest = stable_release(work)
+                    selected = manifest["version"]
+                    bundle = None
+                require(version_tuple(selected) >= version_tuple(installation.current), "Downgrades are refused. The existing application is newer than the selected stable release.")
+                installation.summary(selected)
+                if args.check:
+                    installation.plan("preflight")
+                    print("Compatibility checks passed. No images were built and no services or configuration were changed.")
+                    return
+                if selected == installation.current:
+                    if os.environ.get("REELIO_NONINTERACTIVE") == "1":
+                        if os.environ.get("REELIO_REAPPLY") != "1":
+                            print("Already on this version. Nothing to update.")
+                            return
+                    elif ask("Already on this version. Reapply the same release?", "n").lower() not in ("y", "yes"):
+                        print("Nothing was changed.")
+                        return
+                print("Optional install statistics: random installation ID, version and broad platform; daily healthy check-ins. Opt out with REELIO_TELEMETRY=0 or DO_NOT_TRACK=1. Details: https://telemetry.harveyjs.uk/privacy")
+                print(f"\nLicence: {REPOSITORY}/blob/main/LICENSE.txt\nThe updater will save a private full backup, briefly pause API/web, update their images and verify retained data.")
+                if os.environ.get("REELIO_NONINTERACTIVE") == "1":
+                    require(os.environ.get("REELIO_ACCEPT_LICENSE") == "1" and os.environ.get("REELIO_UPDATE_CONFIRM") == "1", "Unattended updates require REELIO_ACCEPT_LICENSE=1 and REELIO_UPDATE_CONFIRM=1.")
+                else:
+                    require(ask("Accept the licence and update this installation?", "n").lower() in ("y", "yes"), "Update cancelled. Nothing was changed.")
+                if bundle is None:
+                    print("Downloading and verifying the stable release directly on this server...")
+                    bundle = release_bundle(manifest, work)
+                tag = (bundle / "image-tag.txt").read_text().strip()
+                installation.plan(tag)
+                docker_root = Path(run(["docker", "info", "--format", "{{.DockerRootDir}}"], label="Docker storage check").strip())
+                require(docker_root.is_dir() and shutil.disk_usage(docker_root).free >= 1024 * 1024 * 1024,
+                        "Docker needs at least 1 GiB free before preparing update images.")
+                print("Preparing the application images while the current app stays online...")
+                installation.prepared = True
+                run(["sh", str(bundle / "prepare-images.sh")], label="Preparing official application runtime images")
+                installation.check_new_backup_permissions(tag)
+                installation.verify_unchanged()
+                storage = installation.backup_storage()
+                installation.create_backup(storage)
+                installation.apply(selected, tag)
+                report_statistics(target, installation.project, selected)
+        except BaseException:
+            try:
+                installation.rollback()
+            except BaseException:
+                print(f"Automatic application recovery also needs attention. Keep the database and backup intact: {installation.backup}", file=sys.stderr)
+            raise
+        finally:
+            if installation.stage:
+                installation.stage.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(InterruptedError("Update interrupted")))
+    try:
+        main()
+    except (UpdateError, OSError, ValueError, KeyError, KeyboardInterrupt) as error:
+        # Do not dump subprocess arguments, rendered config, URLs containing
+        # database credentials, or a traceback to a shared terminal/log.
+        print(f"\n{str(error) if isinstance(error, UpdateError) else 'Update could not finish; inspect the saved backup and server prerequisites.'}", file=sys.stderr)
         sys.exit(1)
