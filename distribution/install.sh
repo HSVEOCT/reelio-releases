@@ -62,8 +62,42 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+run_update() {
+  update_mode=$1
+  update_target=${2:-}
+  needed=false
+  for tool in python3 curl sha256sum; do command -v "$tool" >/dev/null 2>&1 || needed=true; done
+  if "$needed"; then
+    command -v apt-get >/dev/null 2>&1 && "$interactive" || fail 'Install python3, curl, ca-certificates and coreutils before using guided updates.'
+    yes 'Install the tools needed to check and update Reelio using apt?' y || fail 'Update tools are required to continue.'
+    apt-get update
+    apt-get install -y python3 curl ca-certificates coreutils
+  fi
+  helper_sha=039f906632a5637196fd6d65504575bf4d76d486c4bcc96be188efc3b3ae4648
+  helper_dir=$(dirname -- "$self")
+  helper=$helper_dir/guided-update.py
+  if [ ! -f "$helper" ]; then helper=$helper_dir/distribution/guided-update.py; fi
+  if [ ! -f "$helper" ]; then
+    scratch=$(mktemp -d /tmp/reelio-setup.XXXXXXXX)
+    helper=$scratch/guided-update.py
+    fetch https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/distribution/guided-update.py "$helper"
+  fi
+  [ "$(sha256sum "$helper" | awk '{print $1}')" = "$helper_sha" ] || fail 'The update helper does not match this installer. Download the current installer again; no installation was changed.'
+  set -- python3 "$helper"
+  if [ -n "$update_target" ]; then set -- "$@" --target "$update_target"; fi
+  if [ "$update_mode" = --check ]; then set -- "$@" --check; fi
+  if [ -f "$helper_dir/SHA256SUMS" ] && [ -f "$helper_dir/build.json" ]; then set -- "$@" --bundle "$helper_dir"; fi
+  "$@"
+  exit 0
+}
+case "${1:-}" in
+  --update|--check)
+    [ "$#" -le 2 ] || fail 'Usage: sh install.sh --update [INSTALL-DIRECTORY] or --check [INSTALL-DIRECTORY]'
+    run_update "$1" "${2:-}"
+    ;;
+esac
 if [ "$#" -gt 0 ]; then
-  [ "$#" -eq 2 ] && [ "$1" = --resume ] || fail 'Usage: sh install.sh [--resume INSTALL-DIRECTORY]'
+  [ "$#" -eq 2 ] && [ "$1" = --resume ] || fail 'Usage: sh install.sh [--update|--check|--resume INSTALL-DIRECTORY]'
   target=$(CDPATH='' cd -- "$2" && pwd)
   [ -f "$target/.env" ] && [ -f "$target/.reelio-setup-pending" ] && [ "$(cat "$target/.reelio-setup-pending")" = reelio-setup-v1 ] || fail 'This directory is not an interrupted guided installation. Existing installations must use the update guide.'
   command -v docker >/dev/null && docker info >/dev/null 2>&1 && docker compose version >/dev/null || fail 'Docker Engine and Compose v2 must be running before resuming.'
@@ -77,8 +111,16 @@ fi
 
 say ''
 say 'Welcome to Reelio'
+say '  1) Install a fresh copy'
+say '  2) Update an existing installation (keep its data and settings)'
+ask 'Choose 1 or 2' "${REELIO_ACTION:-1}"
+case "$answer" in
+  1) ;;
+  2) run_update --update "${REELIO_UPDATE_DIR:-}";;
+  *) fail 'Choose 1 or 2.';;
+esac
 say 'This wizard installs a fresh copy on this Linux server.'
-say 'Existing Reelio installations must use the update guide.'
+say 'To update an existing installation, choose option 2 instead.'
 if command -v systemd-detect-virt >/dev/null 2>&1 && [ "$(systemd-detect-virt 2>/dev/null || true)" = lxc ]; then
   say 'LXC detected. Docker must be permitted by your Proxmox/LXC configuration; this script does not change the host.'
 fi

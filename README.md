@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/instal
 sudo sh ./reelio-install.sh
 ```
 
-If logged in as root, omit `sudo`. The wizard asks how you want to connect, downloads the stable release directly to your server, checks it and prints the address to open. Normal LAN setup needs no SCP or tunnel. It can offer Docker installation on Ubuntu/Debian if needed. [Read the short guide](INSTALL.md) for requirements and existing installations.
+If logged in as root, omit `sudo`. Choose a fresh install or an update of an existing installation. The wizard downloads the stable release directly to your server. Fresh setup asks how you want to connect; an update keeps your existing data, settings and port and makes a verified backup first. Normal LAN setup needs no SCP or tunnel. It can offer Docker installation on Ubuntu/Debian if needed. [Read the short guide](INSTALL.md) for requirements and existing installations.
 
 There is no donation account configured yet. Donations will be entirely optional and will not unlock features. Third-party metadata permissions must be confirmed separately; a donation model is not assumed to waive provider terms.
 

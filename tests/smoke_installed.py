@@ -29,6 +29,8 @@ def call(path, payload=None):
 assert call("/api/health")["version"] == (root / "VERSION").read_text().strip()
 assert call("/api/setup/status")["needs_setup"] is True
 password = secrets.token_hex(20)
+(root / ".ci-owner.json").write_text(json.dumps({"email": "wizard@example.invalid", "password": password}))
+(root / ".ci-owner.json").chmod(0o600)
 assert call("/api/setup/owner", {"name": "Wizard test", "email": "wizard@example.invalid", "password": password})["id"]
 call("/api/auth/login", {"email": "wizard@example.invalid", "password": password})
 assert call("/api/me")["email"] == "wizard@example.invalid"
