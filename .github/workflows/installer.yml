@@ -30,14 +30,12 @@ jobs:
         if: failure()
         run: |
           if sudo test -f /opt/reelio-wizard-ci/.env; then
-            cd /opt/reelio-wizard-ci
-            sudo docker compose --env-file .env ps --all
-            sudo docker compose --env-file .env logs --tail 30 web
+            sudo docker compose -f /opt/reelio-wizard-ci/docker-compose.yml --env-file /opt/reelio-wizard-ci/.env ps --all
+            sudo docker compose -f /opt/reelio-wizard-ci/docker-compose.yml --env-file /opt/reelio-wizard-ci/.env logs --tail 30 web
           fi
       - name: Remove only this run's disposable installation
         if: always()
         run: |
           if sudo test -f /opt/reelio-wizard-ci/.env; then
-            cd /opt/reelio-wizard-ci
-            sudo docker compose --env-file .env down --volumes
+            sudo docker compose -f /opt/reelio-wizard-ci/docker-compose.yml --env-file /opt/reelio-wizard-ci/.env down --volumes
           fi
