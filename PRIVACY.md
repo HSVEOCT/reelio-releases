@@ -38,3 +38,9 @@ sudo python3 /opt/reelio/reelio-telemetry.py forget --target /opt/reelio
 ```
 
 Deletion requires a working connection. If it fails, reporting remains disabled and the local key is kept so you can retry. Historical anonymous aggregate totals are retained. An unavailable reporting service never blocks an installation or update. See https://telemetry.harveyjs.uk/privacy for the collector disclosure.
+
+## Voluntary developer feedback
+
+When you press Send in **Feedback & support**, Reelio sends the report type, title, details, Reelio version, random submission reference and an optional email you enter to the developer at `https://telemetry.harveyjs.uk/v1/feedback`. The form explains this before submission. Your account email, credentials, settings and logs are not added automatically. Do not include secrets in the message.
+
+These reports are stored in the private developer inbox, independently of optional installation statistics. They do not create installation counts and can be sent with statistics disabled. Historical reports created for your local administrator stay on your server. Developer reports and optional contact details are retained for up to 365 days with hourly cleanup while service health checks run; the developer can delete them sooner. If you provide an email, it can be used for manual follow-up. Reports are not public GitHub issues, and developer notes/status are not synchronized back to your instance. The collection service describes [reporting and retention](https://telemetry.harveyjs.uk/privacy).

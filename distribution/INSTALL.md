@@ -84,7 +84,7 @@ For a connection problem, check the selected address, port and network access. F
 
 Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install option deliberately refuses occupied folders and projects. Choose option 2 for an existing installation; supported public and JSON migration layouts retain their data and settings.
 
-Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.19**, with guided service setup and a request-approval choice in the app.
+Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.20**, with guided service setup, request-approval controls, developer feedback and improved NAS installation support.
 
 
 ## Optional installation statistics
@@ -100,3 +100,13 @@ sudo env REELIO_TELEMETRY=0 sh ./reelio-install.sh
 `DO_NOT_TRACK=1` also works. The saved opt-out survives updates. After setup, run `sudo python3 /opt/reelio/reelio-telemetry.py disable --target /opt/reelio`, replacing the folder as needed. Daily reporting requires systemd; other hosts send only an initial successful-operation report. Telemetry failures never fail or roll back an installation/update. Compatibility-only checks, failed operations and cancelled operations do not report.
 
 Read [the reporting and retention details](PRIVACY.md#optional-installation-statistics).
+
+## NAS and Docker-group users
+
+Run the installer as the same account that can run `docker info` and Docker Compose. Root is not required when the tools and Docker already work. Choose an installation directory and parent owned by that account (the non-root default is `$HOME/reelio`). Existing root-owned installations still require their owner or an administrator; the installer never changes ownership of private settings or Docker storage.
+
+Missing system packages may require sudo after the package-install question. NAS-managed Docker is kept in place. If Docker data storage is not accessible to the account, image allocation is checked by Docker; check free space in your NAS interface too. Optional install/update statistics work without root; automatic daily system timers need an administrator. No sudo prompt is issued for statistics.
+
+## Sending feedback
+
+**Feedback & support** sends new bug reports and feature requests to the Reelio developer with a clear notice and optional email for follow-up. Account details, credentials and logs are not attached automatically. This works independently of installation statistics; [reporting privacy](https://telemetry.harveyjs.uk/privacy) explains the payload and retention. Older local reports stay on the self-hosted server.
