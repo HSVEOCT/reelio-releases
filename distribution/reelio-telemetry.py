@@ -157,6 +157,10 @@ def unit_name(target):
 
 
 def timer(target, enabled):
+    if hasattr(os, "geteuid") and os.geteuid() != 0:
+        if enabled:
+            print("Installation statistics can be sent by this user. Daily check-ins need an administrator to configure the system timer; no sudo was attempted.")
+        return
     name = unit_name(target)
     if not Path("/run/systemd/system").exists() or not shutil.which("systemctl"):
         if enabled:

@@ -48,7 +48,7 @@ class InstallerTests(unittest.TestCase):
         if os.name == "nt":
             self.env["PATH"] = shell_path(self.bin) + ":/usr/bin:/bin"
         self.tool("uname", 'case "$1" in -s) echo Linux;; -m) echo x86_64;; esac')
-        self.tool("id", "echo 0")
+        self.tool("id", 'echo "${MOCK_UID:-0}"')
         self.tool("python3", 'exec "' + shell_path(sys.executable) + '" "$@"')
         self.tool("systemd-detect-virt", "echo none")
         self.tool("ip", '''case "$*" in
@@ -138,6 +138,16 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual((self.target / "web/assets").stat().st_mode & 0o777, 0o755)
             self.assertEqual((self.target / "web/assets/app.js").stat().st_mode & 0o777, 0o644)
             self.assertEqual((self.target / "reelio-api").stat().st_mode & 0o777, 0o755)
+
+    def test_docker_group_user_installs_without_sudo(self):
+        self.tool("sudo", 'echo "Unexpected sudo" >&2; exit 91')
+        self.run_setup(MOCK_UID="1000")
+        self.assertTrue((self.target / ".env").is_file())
+
+    def test_docker_group_user_gets_actionable_access_error(self):
+        result = self.run_setup(success=False, MOCK_UID="1000", MOCK_DOCKER_DOWN="1")
+        self.assertIn("docker group", result.stderr)
+        self.assertFalse(self.target.exists())
 
     def test_lan_detects_server_address(self):
         result = self.run_setup(REELIO_ACCESS="1", REELIO_PORT="43835")

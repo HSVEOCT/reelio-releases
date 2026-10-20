@@ -4,6 +4,11 @@ set -eu
 umask 077
 
 fail() { printf '\n%s\n' "$*" >&2; exit 1; }
+as_root() {
+  if [ "$(id -u)" = 0 ]; then "$@";
+  elif command -v sudo >/dev/null 2>&1; then sudo -- "$@";
+  else fail 'Installing missing system packages needs an administrator. Install the prerequisites, then rerun as your Docker user.'; fi
+}
 say() { printf '%s\n' "$*"; }
 interactive=true
 [ "${REELIO_NONINTERACTIVE:-0}" != 1 ] || interactive=false
@@ -34,12 +39,12 @@ ready() {
   fi
   say 'Create your owner account and follow the guided setup; existing owners can use Admin > Guided setup.'
   say "Settings and application files: $target"
-  say "Back up later: cd '$target' && sudo sh backup.sh"
+  say "Back up later: cd '$target' && sh backup.sh"
 }
 
 statistics() (
   # Runs after healthy startup. Failures cannot affect installation or recovery.
-  expected=d5aaf1727d23c250feea3ab1f4009e1865a852f42a7147d422bbf0298e557ab9
+  expected=4af4457add0fc26195822f69f3c403fa65a400f3b9563830a10181d2bb47ec25
   case "${REELIO_TELEMETRY:-1}:${DO_NOT_TRACK:-0}" in 0:*|false:*|FALSE:*|off:*|OFF:*|no:*|NO:*|*:1) [ -e "$target/.reelio-telemetry.disabled" ] || [ -L "$target/.reelio-telemetry.disabled" ] || (set -C; : > "$target/.reelio-telemetry.disabled");; esac
   local_dir=$(dirname -- "$self")
   helper=$local_dir/reelio-telemetry.py
@@ -66,7 +71,8 @@ start() {
 }
 
 [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || fail 'Reelio currently requires a Linux amd64/x86_64 server. Run this on that server, not on your Windows PC or Mac.'
-[ "$(id -u)" = 0 ] || fail 'Run with sudo, or as root in your server console: sudo sh ./reelio-install.sh'
+default_target=/opt/reelio
+[ "$(id -u)" = 0 ] || default_target=${HOME:?}/reelio
 self=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")
 scratch=''
 target=''
@@ -90,10 +96,10 @@ run_update() {
   if "$needed"; then
     command -v apt-get >/dev/null 2>&1 && "$interactive" || fail 'Install python3, curl, ca-certificates and coreutils before using guided updates.'
     yes 'Install the tools needed to check and update Reelio using apt?' y || fail 'Update tools are required to continue.'
-    apt-get update
-    apt-get install -y python3 curl ca-certificates coreutils
+    as_root apt-get update
+    as_root apt-get install -y python3 curl ca-certificates coreutils
   fi
-  helper_sha=9d8b0aa3c074c4e88c4f5f53cb1b03434ed3bbc2087c3c7e65d8d9fe98e208b5
+  helper_sha=0878722ecc00fd5cbeb5d68113cf5ee404951d2ca4e80558aaf1e9d922e01f0d
   helper_dir=$(dirname -- "$self")
   helper=$helper_dir/guided-update.py
   if [ ! -f "$helper" ]; then helper=$helper_dir/distribution/guided-update.py; fi
@@ -147,7 +153,7 @@ if command -v systemd-detect-virt >/dev/null 2>&1 && [ "$(systemd-detect-virt 2>
   say 'LXC detected. Docker must be permitted by your Proxmox/LXC configuration; this script does not change the host.'
 fi
 say ''
-ask 'Installation folder (use an empty, dedicated folder)' "${REELIO_INSTALL_DIR:-/opt/reelio}"
+ask 'Installation folder (use an empty, dedicated folder)' "${REELIO_INSTALL_DIR:-$default_target}"
 target=$answer
 case "$target" in /*) ;; *) fail 'Choose an absolute installation path, such as /opt/reelio.';; esac
 case "$target" in *[!a-zA-Z0-9_./-]*|*/../*|*/..|*/./*|*/.|*//*|*/) fail 'Use a simple absolute folder path without spaces, trailing slashes, or . / .. path segments.';; esac
@@ -220,8 +226,8 @@ if "$missing"; then
   command -v apt-get >/dev/null 2>&1 || fail 'Install python3, curl, ca-certificates, openssl, tar, gzip, coreutils and iproute2, then rerun.'
   "$interactive" || fail 'Install python3, curl, ca-certificates, openssl, tar, gzip, coreutils and iproute2 before unattended setup.'
   yes 'Install the missing setup tools using apt?' y || fail 'Setup tools are required to continue.'
-  apt-get update
-  apt-get install -y python3 ca-certificates curl openssl tar gzip coreutils iproute2
+  as_root apt-get update
+  as_root apt-get install -y python3 ca-certificates curl openssl tar gzip coreutils iproute2
 fi
 scratch=$(mktemp -d /tmp/reelio-setup.XXXXXXXX)
 if ! command -v docker >/dev/null 2>&1; then
@@ -240,12 +246,12 @@ if ! command -v docker >/dev/null 2>&1; then
   case "$codename" in ''|*[!a-zA-Z0-9_-]*) fail 'Cannot detect a supported distribution codename.';; esac
   [ ! -e /etc/apt/sources.list.d/docker.sources ] && [ ! -e /etc/apt/sources.list.d/docker.list ] && [ ! -e /etc/apt/keyrings/docker.asc ] || fail 'Docker repository settings already exist. Complete your Docker installation first; Reelio will not overwrite them.'
   fetch "https://download.docker.com/linux/$ID/dists/$codename/Release" "$scratch/docker-release"
-  apt-get update
-  apt-get install -y ca-certificates curl
-  install -m 0755 -d /etc/apt/keyrings
+  as_root apt-get update
+  as_root apt-get install -y ca-certificates curl
+  as_root install -m 0755 -d /etc/apt/keyrings
   fetch "https://download.docker.com/linux/$ID/gpg" "$scratch/docker.asc"
-  install -m 0644 "$scratch/docker.asc" /etc/apt/keyrings/docker.asc
-  cat > /etc/apt/sources.list.d/docker.sources <<EOF
+  as_root install -m 0644 "$scratch/docker.asc" /etc/apt/keyrings/docker.asc
+  cat > "$scratch/docker.sources" <<EOF
 Types: deb
 URIs: https://download.docker.com/linux/$ID
 Suites: $codename
@@ -253,11 +259,12 @@ Components: stable
 Architectures: amd64
 Signed-By: /etc/apt/keyrings/docker.asc
 EOF
-  apt-get update
-  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  systemctl enable --now docker
+  as_root install -m 0644 "$scratch/docker.sources" /etc/apt/sources.list.d/docker.sources
+  as_root apt-get update
+  as_root apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  as_root systemctl enable --now docker
 fi
-docker info >/dev/null 2>&1 || fail 'Docker is installed but is not available. Start Docker first. In Proxmox LXC, check the Docker/nesting configuration of your container.'
+docker info >/dev/null 2>&1 || fail 'Docker is installed but is not available. Start Docker and ensure this user can access it (for example, membership of the docker group). In Proxmox LXC, check nesting.'
 docker compose version >/dev/null 2>&1 || fail 'Docker Compose v2 is missing. Install it for your existing Docker installation, then rerun. See https://docs.docker.com/compose/install/linux/'
 endpoint=$(docker context inspect --format '{{.Endpoints.docker.Host}}')
 if [ -z "${DOCKER_CONTEXT:-}" ]; then endpoint=${DOCKER_HOST:-$endpoint}; fi
@@ -272,9 +279,14 @@ if [ -n "$(ss -H -ltn "sport = :$port")" ] || printf '%s\n' "$published_ports" |
 fi
 parent=$target
 while [ ! -d "$parent" ]; do parent=$(dirname -- "$parent"); done
+[ -w "$parent" ] || fail "The installation parent $parent is not writable. Choose a folder owned by your Docker user."
 [ "$(df -Pk "$parent" | awk 'END {print $4}')" -ge 1048576 ] || fail 'At least 1 GiB of free disk space is required for setup; allow more for images, database and backups.'
 docker_root=$(docker info --format '{{.DockerRootDir}}')
-[ -d "$docker_root" ] && [ "$(df -Pk "$docker_root" | awk 'END {print $4}')" -ge 1048576 ] || fail 'Docker needs at least 1 GiB of free storage; allow more as your data grows.'
+if [ -d "$docker_root" ] && [ -x "$docker_root" ]; then
+  [ "$(df -Pk "$docker_root" | awk 'END {print $4}')" -ge 1048576 ] || fail 'Docker needs at least 1 GiB of free storage; allow more as your data grows.'
+else
+  say 'Docker storage is managed by the NAS. Host disk checks passed; Docker will report any image storage shortage.'
+fi
 
 # The same wizard can run from a future release bundle or download today's
 # published compiled-application bundle without changing that archive's bytes.
