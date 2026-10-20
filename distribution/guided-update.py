@@ -544,7 +544,7 @@ class Installation:
 
 def report_statistics(target, project, version):
     """Only called after a verified successful update; never changes its result."""
-    expected = "d5aaf1727d23c250feea3ab1f4009e1865a852f42a7147d422bbf0298e557ab9"
+    expected = "4af4457add0fc26195822f69f3c403fa65a400f3b9563830a10181d2bb47ec25"
     try:
         if os.environ.get("REELIO_TELEMETRY", "").lower() in {"0", "false", "off", "no"} or os.environ.get("DO_NOT_TRACK") == "1":
             try:
@@ -573,7 +573,7 @@ def main():
     parser.add_argument("--check", action="store_true", help="Inspect compatibility without building images or stopping services")
     parser.add_argument("--bundle", type=Path, help="Use an already downloaded verified compiled bundle")
     args = parser.parse_args()
-    require(sys.platform == "linux" and os.uname().machine == "x86_64" and os.geteuid() == 0, "Run this on the Linux amd64 Docker server with sudo or as root.")
+    require(sys.platform == "linux" and os.uname().machine == "x86_64", "Run this on the Linux amd64 server as a user with Docker access.")
     os.umask(0o077)
     run(["docker", "info"], label="Docker availability check")
     endpoint = run(["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"], label="Docker context check").strip()
@@ -581,6 +581,8 @@ def main():
         endpoint = os.environ.get("DOCKER_HOST", endpoint)
     require(endpoint.startswith("unix://"), "Remote Docker contexts are not supported. Run setup on the Docker host.")
     target = select_target(args.target)
+    require(os.access(target, os.W_OK | os.X_OK) and os.access(target.parent, os.W_OK | os.X_OK),
+            "The installation and its parent must be writable by this Docker user, including for private backups.")
     with ExitStack() as resources:
         lock = os.open(target, os.O_RDONLY | os.O_DIRECTORY)
         resources.callback(os.close, lock)
@@ -626,8 +628,11 @@ def main():
                 tag = (bundle / "image-tag.txt").read_text().strip()
                 installation.plan(tag)
                 docker_root = Path(run(["docker", "info", "--format", "{{.DockerRootDir}}"], label="Docker storage check").strip())
-                require(docker_root.is_dir() and shutil.disk_usage(docker_root).free >= 1024 * 1024 * 1024,
-                        "Docker needs at least 1 GiB free before preparing update images.")
+                if docker_root.is_dir() and os.access(docker_root, os.X_OK):
+                    require(shutil.disk_usage(docker_root).free >= 1024 * 1024 * 1024,
+                            "Docker needs at least 1 GiB free before preparing update images.")
+                else:
+                    print("Docker storage is managed by the NAS; image preparation will check allocation through Docker.")
                 print("Preparing the application images while the current app stays online...")
                 installation.prepared = True
                 run(["sh", str(bundle / "prepare-images.sh")], label="Preparing official application runtime images")

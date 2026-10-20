@@ -94,3 +94,9 @@ sudo env REELIO_TELEMETRY=0 sh ./reelio-install.sh
 `DO_NOT_TRACK=1` also works. The saved opt-out survives updates. After setup, run `sudo python3 /opt/reelio/reelio-telemetry.py disable --target /opt/reelio`, replacing the folder as needed. Daily reporting requires systemd; other hosts send only an initial successful-operation report. Telemetry failures never fail or roll back an installation/update. Compatibility-only checks, failed operations and cancelled operations do not report.
 
 Read [the reporting and retention details](PRIVACY.md#optional-installation-statistics).
+
+## NAS and Docker-group users
+
+Run the installer as the same account that can run `docker info` and Docker Compose. Root is not required when the tools and Docker already work. Choose an installation directory and parent owned by that account (the non-root default is `$HOME/reelio`). Existing root-owned installations still require their owner or an administrator; the installer never changes ownership of private settings or Docker storage.
+
+Missing system packages may require sudo after the package-install question. NAS-managed Docker is kept in place. If Docker data storage is not accessible to the account, image allocation is checked by Docker; check free space in your NAS interface too. Optional install/update statistics work without root; automatic daily system timers need an administrator. No sudo prompt is issued for statistics.
