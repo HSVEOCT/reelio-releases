@@ -4,7 +4,7 @@ A home for your family's next film night. Discover movies and shows, request mis
 
 **[Visit the Reelio website](https://reelio.harveyjs.uk/)**
 
-**[Reelio 1.0.19 is available to download](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.19).**
+**[Reelio 1.0.20 is available to download](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.20).**
 
 Reelio is free for personal, non-commercial self-hosting under the [Reelio Personal Use Licence](LICENSE.txt). The application source is private. This repository contains the public website, documentation and installation helpers; release bundles contain the compiled API, browser assets and runtime assembly files. Application source is not included.
 
@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/HSVEOCT/reelio-releases/main/instal
 sudo sh ./reelio-install.sh
 ```
 
-If logged in as root, omit `sudo`. Choose a fresh install or an update of an existing installation. The wizard downloads the stable release directly to your server. Fresh setup asks how you want to connect; an update keeps your existing data, settings and port and makes a verified backup first. Normal LAN setup needs no SCP or tunnel. It can offer Docker installation on Ubuntu/Debian if needed. [Read the short guide](INSTALL.md) for requirements and existing installations.
+If logged in as root, omit `sudo`. If your account already has working Docker access, you can run `sh ./reelio-install.sh` without sudo and choose a user-owned installation folder. Choose a fresh install or an update of an existing installation. The wizard downloads the stable release directly to your server. Fresh setup asks how you want to connect; an update keeps your existing data, settings and port and makes a verified backup first. Normal LAN setup needs no SCP or tunnel. It can offer Docker installation on Ubuntu/Debian if needed. [Read the short guide](INSTALL.md) for requirements and existing installations.
 
 After creating your owner account, the in-app guide helps connect TMDB, Jellyfin and optional Radarr/Sonarr services. Test connections, select real profiles and folders, or skip services you do not use. You can resume from **Admin → Guided setup**. The Requests step lets the owner choose whether adult requests need approval. It is ticked by default on fresh installs; children always need approval. Existing installations keep their previous rules until changed.
 
@@ -36,8 +36,12 @@ You can [support Reelio on Ko-fi](https://ko-fi.com/reelio). Donations are entir
 
 Application code and build workflows live in a separate private repository. Public files are copied through an explicit allowlist. The maintainer's home deployment has its own configuration, database and volumes and is never exposed by this website.
 
-Download the versioned application bundle and checksum from the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). Version 1.0.19 passed automated installation, request-approval and update-retention checks; the maintainer approved its public release. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.
+Download the versioned application bundle and checksum from the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). Version 1.0.20 passed automated installation, NAS compatibility and update-retention checks, and the maintainer tested this exact archive on both test and live instances before release. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.
 
 ## Installation statistics
 
 The installer reports successful installs/updates and daily healthy check-ins using a random installation ID and broad platform/version details. Reporting defaults on with a persistent opt-out; no account or media data is included. Read [what is collected, how long it is kept and how to disable it](PRIVACY.md#optional-installation-statistics).
+
+## Feedback for the developer
+
+Use **Feedback & support** in Reelio to send bug reports or feature requests directly to the developer. The form discloses what is sent: report type, title, details, version and an optional email for follow-up. Your account email, credentials and logs are not attached automatically. Reports are independent of optional installation statistics. Historical local feedback stays on your server. See [reporting privacy](https://telemetry.harveyjs.uk/privacy).
