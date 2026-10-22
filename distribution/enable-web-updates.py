@@ -15,6 +15,15 @@ import sys
 sys.dont_write_bytecode = True
 
 
+def updater_compose_document(config, original, multiple_files, desired, escape):
+    # A resolved model is safe as a replacement for a single Compose file.
+    # In a stack, retain the original override: resolved config can omit
+    # inactive services/volumes, which an earlier file would then reintroduce.
+    document = json.loads(original) if multiple_files else escape(deepcopy(config))
+    document.setdefault("services", {}).setdefault("api", {}).setdefault("volumes", []).append(deepcopy(desired))
+    return document
+
+
 def main():
     parser = argparse.ArgumentParser(description="Enable Admin > Updates for this installation. Requires root and systemd once; later updates run in the browser.")
     parser.add_argument("--target", required=True, type=Path)
@@ -90,9 +99,9 @@ WantedBy=multi-user.target
         if not backup.exists():
             backup.write_bytes(original)
             backup.chmod(0o600)
-        volumes.append(desired)
         try:
-            helper.private_json(installation.files[-1], helper.escape_compose(config))
+            document = updater_compose_document(config, original, len(installation.files) > 1, desired, helper.escape_compose)
+            helper.private_json(installation.files[-1], document)
             planned=installation.compose_json()
             added=[volume for volume in planned["services"]["api"].get("volumes",[]) if volume.get("target")=="/run/reelio-updater"]
             if len(added)!=1 or added[0].get("source")!=str(socket_dir) or not added[0].get("read_only"):
