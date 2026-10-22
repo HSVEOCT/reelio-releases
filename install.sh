@@ -60,6 +60,22 @@ statistics() (
   timeout 35s python3 "$helper" configure --target "$target" --project "$(value REELIO_PROJECT)" --event install --version "$(cat "$target/VERSION")" || true
 )
 
+browser_updates() {
+  [ -f "$target/enable-web-updates.py" ] || return 0
+  if [ "$(id -u)" != 0 ] || [ ! -d /run/systemd/system ]; then
+    say 'Browser updates can be enabled once by the host administrator on a Linux systemd host.'
+    return 0
+  fi
+  enable=${REELIO_ENABLE_WEB_UPDATES:-0}
+  if "$interactive"; then
+    say 'Browser updates use a root-owned host helper scoped to this Reelio installation; the app receives only a private Unix socket.'
+    if yes 'Enable updates from Admin > Updates?' y; then enable=1; else enable=0; fi
+  fi
+  if [ "$enable" = 1 ]; then
+    python3 "$target/enable-web-updates.py" --target "$target" || say 'Reelio is running. Browser update setup needs attention; the normal updater remains available.'
+  fi
+}
+
 start() {
   cd "$target"
   docker compose --env-file .env config --quiet
@@ -68,6 +84,7 @@ start() {
   rm -f .reelio-setup-pending
   ready
   statistics || say 'Optional statistics were skipped. Reelio is unaffected.'
+  browser_updates
 }
 
 [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || fail 'Reelio currently requires a Linux amd64/x86_64 server. Run this on that server, not on your Windows PC or Mac.'
@@ -99,7 +116,7 @@ run_update() {
     as_root apt-get update
     as_root apt-get install -y python3 curl ca-certificates coreutils
   fi
-  helper_sha=0878722ecc00fd5cbeb5d68113cf5ee404951d2ca4e80558aaf1e9d922e01f0d
+  helper_sha=282484ddd2f5c1338365c79c41f2a9271855eb0d256aea83d373d156fe26df6a
   helper_dir=$(dirname -- "$self")
   helper=$helper_dir/guided-update.py
   if [ ! -f "$helper" ]; then helper=$helper_dir/distribution/guided-update.py; fi

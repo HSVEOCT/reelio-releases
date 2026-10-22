@@ -35,13 +35,9 @@ The wizard downloads the current stable release **directly to your server**, che
 
 When setup finishes, open the address it prints in a browser on your computer.
 
-1. Create your owner account. The guided setup opens automatically.
-2. Add your own TMDB credentials to enable discovery, then connect Jellyfin if you use it.
-3. Optionally connect Radarr and Sonarr. Test each connection and choose from the quality profiles and root folders returned by your service.
-
-On the **Requests** step, **Require approval for requests** is ticked by default for fresh installations. Untick it to let adult requests proceed automatically; child accounts still need approval. Administrator profiles can request directly, subject to any extra request policies. The choice is saved when pausing and shown on the final review. Upgrades retain existing approval behaviour until the owner changes it. Changing the setting affects future requests and does not approve waiting requests in bulk.
-
-You can skip services you do not use or pause and return through **Admin → Guided setup**. Existing installations open normally after an update; their owners can open the guide from Admin, keeping saved credentials and other settings.
+1. Create your owner account.
+2. Open **Admin → Integrations** and add your own TMDB credentials to enable discovery.
+3. Connect Jellyfin and any optional services you use, then test them.
 
 Keep the server and chosen address reachable from your household's network. Create your owner account before inviting other people.
 
@@ -84,29 +80,22 @@ For a connection problem, check the selected address, port and network access. F
 
 Use [Updates and backups](UPDATING.md) to upgrade an existing installation. The fresh-install option deliberately refuses occupied folders and projects. Choose option 2 for an existing installation; supported public and JSON migration layouts retain their data and settings.
 
-Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The current stable release is **1.0.20**, with guided service setup, request-approval controls, developer feedback and improved NAS installation support.
+Manual versioned downloads and checksums remain available on the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). The published 1.0.17 archive retains its original installer; the guided script above works with that exact verified package without modifying the release asset.
 
+## NAS users
+The guided installer supports accounts with Docker access without root. Use a writable folder and parent, such as `$HOME/reelio`. Existing root-owned installations require their owner or an administrator. Optional daily statistics timers need an administrator; no automatic sudo is attempted for reporting.
 
-## Optional installation statistics
-
-Setup prints a reporting notice before installation or update confirmation. Successful installs/updates and daily healthy check-ins use a random installation ID and broad platform/version details, with no account or media data. Reporting defaults on; it is pseudonymous rather than fully anonymous.
-
-To opt out before running setup or an update:
+## Browser updates (1.0.21 and later)
+After upgrading to this version, the installation owner can enable the host updater once:
 
 ```sh
-sudo env REELIO_TELEMETRY=0 sh ./reelio-install.sh
+sudo python3 /path/to/verified/bundle/enable-web-updates.py --target /opt/reelio
 ```
 
-`DO_NOT_TRACK=1` also works. The saved opt-out survives updates. After setup, run `sudo python3 /opt/reelio/reelio-telemetry.py disable --target /opt/reelio`, replacing the folder as needed. Daily reporting requires systemd; other hosts send only an initial successful-operation report. Telemetry failures never fail or roll back an installation/update. Compatibility-only checks, failed operations and cancelled operations do not report.
+Replace both paths for your setup. Use the verified downloaded candidate/release bundle; the app itself cannot grant host access. This requires Linux with systemd and root once, even when normal installation runs as a Docker-group user. The service prepares a private root-owned helper and mounts only its Unix socket into the API. It briefly recreates API/web to add that mount and refresh their connection, retaining the database, settings and web port. No Docker socket is mounted into the app.
 
-Read [the reporting and retention details](PRIVACY.md#optional-installation-statistics).
+Then open **Admin > Updates**, check the stable release, accept the licence and press **Back up and update**. The page reconnects while the API/web restart. Existing data is verified and the previous application is recovered on failure where possible; a database is never automatically restored. Backups and diagnostic logs are private on the server. A failed/interrupted operation that needs attention must be inspected by the server owner before another update.
 
-## NAS and Docker-group users
+Only a newer release selected by the official stable manifest can be installed. New releases do not install automatically. Hosts without systemd can continue using the guided installer/updater.
 
-Run the installer as the same account that can run `docker info` and Docker Compose. Root is not required when the tools and Docker already work. Choose an installation directory and parent owned by that account (the non-root default is `$HOME/reelio`). Existing root-owned installations still require their owner or an administrator; the installer never changes ownership of private settings or Docker storage.
-
-Missing system packages may require sudo after the package-install question. NAS-managed Docker is kept in place. If Docker data storage is not accessible to the account, image allocation is checked by Docker; check free space in your NAS interface too. Optional install/update statistics work without root; automatic daily system timers need an administrator. No sudo prompt is issued for statistics.
-
-## Sending feedback
-
-**Feedback & support** sends new bug reports and feature requests to the Reelio developer with a clear notice and optional email for follow-up. Account details, credentials and logs are not attached automatically. This works independently of installation statistics; [reporting privacy](https://telemetry.harveyjs.uk/privacy) explains the payload and retention. Older local reports stay on the self-hosted server.
+Fresh interactive installs offer to enable browser updates after Reelio is healthy. Unattended installs require the explicit `REELIO_ENABLE_WEB_UPDATES=1` setting; ordinary installations remain available without the host service.

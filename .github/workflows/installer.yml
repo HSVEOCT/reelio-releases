@@ -2,9 +2,9 @@ name: Guided installer
 on:
   push:
     branches: [main]
-    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'distribution/reelio-telemetry.py', 'tests/**', '.github/workflows/installer.yml']
+    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'distribution/reelio-telemetry.py', 'distribution/reelio-updater.py', 'distribution/enable-web-updates.py', 'tests/**', '.github/workflows/installer.yml']
   pull_request:
-    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'distribution/reelio-telemetry.py', 'tests/**', '.github/workflows/installer.yml']
+    paths: ['install.sh', 'distribution/install.sh', 'distribution/guided-update.py', 'distribution/reelio-telemetry.py', 'distribution/reelio-updater.py', 'distribution/enable-web-updates.py', 'tests/**', '.github/workflows/installer.yml']
   workflow_dispatch:
 permissions:
   contents: read

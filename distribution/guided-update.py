@@ -384,6 +384,11 @@ class Installation:
                 if mount["Type"] == "volume" and mount.get("Name") not in database_volumes:
                     selected[("volume", mount["Name"])] = mount
                 elif mount["Type"] == "bind":
+                    if mount.get("Destination")=="/run/reelio-updater":
+                        require(not mount.get("RW") and re.fullmatch(r"/var/lib/reelio-updater-sockets/[a-f0-9]{12}",mount["Source"]),"The updater socket mount is unexpected.")
+                        # A host service recreates this socket; it is not app data
+                        # and cannot be meaningfully restored from a tar archive.
+                        continue
                     selected[("bind", mount["Source"])] = mount
         names = run(["docker", "volume", "ls", "-q", "--filter", f"label=com.docker.compose.project={self.project}"]).split()
         for name in names:
