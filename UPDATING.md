@@ -97,3 +97,13 @@ Then open **Admin > Updates**, check the stable release, accept the licence and 
 Only a newer release selected by the official stable manifest can be installed. New releases do not install automatically. Hosts without systemd can continue using the guided installer/updater.
 
 Fresh interactive installs offer to enable browser updates after Reelio is healthy. Unattended installs require the explicit `REELIO_ENABLE_WEB_UPDATES=1` setting; ordinary installations remain available without the host service.
+
+## Full browser backups and restores (1.0.22 and later)
+
+Open **Admin > Backups** to create and download a full `.reelio-backup.gz` file, enable daily backups, or restore a saved/uploaded full backup. It includes users, password hashes, requests, watchlists, settings, branding and saved integration credentials. Keep the file private and retain an off-server copy.
+
+Restoring replaces application data after a preview, typed **RESTORE** confirmation and a verified safety backup. The replacement is transactional. A successful restore signs out browser sessions and pauses background services until a restored administrator reviews **Connections** and resumes them from **Backups**.
+
+On a new installation, create a temporary owner account and choose **Restore from a backup** at the start of guided setup. Sign in afterwards using an administrator account from the backup.
+
+Media files, Docker/env settings, host updater settings and earlier backup files are excluded. Keep the destination host configuration. Legacy SQL files and the updater's private `database.dump` remain separate recovery formats; they cannot be uploaded through this browser flow. See the [full backup guide](INSTALL.md#full-backup-and-restore-1022-and-later) for limits and compatibility.

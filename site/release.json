@@ -1,7 +1,7 @@
 {
-  "version": "1.0.21",
+  "version": "1.0.22",
   "channel": "stable",
-  "downloadUrl": "https://github.com/HSVEOCT/reelio-releases/releases/download/v1.0.21/reelio-1.0.21-linux-amd64.tar.gz",
-  "sha256": "911d056b7d2bd793f25595e89e7e05785d79b893962045b1e22edf5bf0686d16",
+  "downloadUrl": "https://github.com/HSVEOCT/reelio-releases/releases/download/v1.0.22/reelio-1.0.22-linux-amd64.tar.gz",
+  "sha256": "22313d05ec6d629e9787b85fd1e21fe8edd8631350ab6e4a91dec94fdac6d4b1",
   "donationUrl": "https://ko-fi.com/reelio"
 }

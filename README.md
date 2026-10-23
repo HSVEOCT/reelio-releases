@@ -4,12 +4,13 @@ A home for your family's next film night. Discover movies and shows, request mis
 
 **[Visit the Reelio website](https://reelio.harveyjs.uk/)**
 
-**[Reelio 1.0.20 is available to download](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.20).**
+**[Reelio 1.0.22 is available to download](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.22).**
 
 Reelio is free for personal, non-commercial self-hosting under the [Reelio Personal Use Licence](LICENSE.txt). The application source is private. This repository contains the public website, documentation and installation helpers; release bundles contain the compiled API, browser assets and runtime assembly files. Application source is not included.
 
 - [Get started](INSTALL.md)
 - [Updates and backups](UPDATING.md)
+- [Full backup and restore](INSTALL.md#full-backup-and-restore-1022-and-later)
 - [How releases are tested](RELEASES.md)
 - [Privacy and integrations](PRIVACY.md)
 - [Licences and third-party components](THIRD-PARTY.md)
@@ -36,7 +37,7 @@ You can [support Reelio on Ko-fi](https://ko-fi.com/reelio). Donations are entir
 
 Application code and build workflows live in a separate private repository. Public files are copied through an explicit allowlist. The maintainer's home deployment has its own configuration, database and volumes and is never exposed by this website.
 
-Download the versioned application bundle and checksum from the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). Version 1.0.20 passed automated installation, NAS compatibility and update-retention checks, and the maintainer tested this exact archive on both test and live instances before release. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.
+Download the versioned application bundle and checksum from the [Releases page](https://github.com/HSVEOCT/reelio-releases/releases). Version 1.0.22 passed automated installation, NAS compatibility and update-retention checks, including browser backup/restore, transactional rollback, fresh-owner replacement and the existing browser updater. GitHub's automatically generated source archives of **this** repository contain public distribution materials only, not the Reelio application.
 
 ## Installation statistics
 
