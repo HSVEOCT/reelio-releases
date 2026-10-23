@@ -11,9 +11,9 @@ Preview releases are marked as prereleases. A stable release is an explicit prom
 
 ## Current status
 
-[Reelio 1.0.18 is the current stable release](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.18). Its exact home-tested archive is available with a SHA256 checksum. Optional support is available through [Ko-fi](https://ko-fi.com/reelio).
+[Reelio 1.0.22 is the current stable release](https://github.com/HSVEOCT/reelio-releases/releases/tag/v1.0.22). It adds full backup and restore in Admin and first-time guided setup. The exact published archive passed hosted Linux/PostgreSQL and real Docker installation, update, browser backup/restore and host-updater checks. Optional support is available through [Ko-fi](https://ko-fi.com/reelio).
 
-Archive SHA256: `038daa8e063031878e52beb3c49baac58cb48f2bdd4a4a8c039397fbf2e33e85`.
+Archive SHA256: `22313d05ec6d629e9787b85fd1e21fe8edd8631350ab6e4a91dec94fdac6d4b1`.
 
 ## What to keep
 
